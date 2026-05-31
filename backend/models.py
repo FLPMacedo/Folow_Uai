@@ -116,6 +116,12 @@ class TelefoneWhatsApp(SQLModel, table=True):
     status: StatusTelefone = Field(default=StatusTelefone.ativo, index=True)
     ultimo_envio: Optional[datetime] = None
     total_envios: int = 0
+    # Anti-banimento por número (override do global)
+    intervalo_min_minutos: Optional[int] = None  # None = usa Sender default
+    limite_diario: Optional[int] = None           # None = ilimitado
+    horario_inicio: Optional[str] = None          # 'HH:MM' (None = sem restrição)
+    horario_fim: Optional[str] = None             # 'HH:MM'
+    variacao_texto_ativa: bool = False
     criado_em: datetime = Field(default_factory=utcnow)
     atualizado_em: datetime = Field(default_factory=utcnow)
 

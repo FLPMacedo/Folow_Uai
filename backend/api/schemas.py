@@ -60,6 +60,11 @@ class TelefoneCreate(SQLModel):
     instancia_evolution: str
     nome_fantasia: Optional[str] = None
     status: StatusTelefone = StatusTelefone.ativo
+    intervalo_min_minutos: Optional[int] = None
+    limite_diario: Optional[int] = None
+    horario_inicio: Optional[str] = None
+    horario_fim: Optional[str] = None
+    variacao_texto_ativa: bool = False
 
 
 class TelefoneUpdate(SQLModel):
@@ -67,6 +72,11 @@ class TelefoneUpdate(SQLModel):
     instancia_evolution: Optional[str] = None
     nome_fantasia: Optional[str] = None
     status: Optional[StatusTelefone] = None
+    intervalo_min_minutos: Optional[int] = None
+    limite_diario: Optional[int] = None
+    horario_inicio: Optional[str] = None
+    horario_fim: Optional[str] = None
+    variacao_texto_ativa: Optional[bool] = None
 
 
 # ============================================================================

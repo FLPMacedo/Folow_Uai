@@ -48,6 +48,12 @@ export interface Telefone {
   status: StatusTelefone;
   ultimo_envio?: string | null;
   total_envios: number;
+  // Anti-banimento por número
+  intervalo_min_minutos?: number | null;
+  limite_diario?: number | null;
+  horario_inicio?: string | null;        // 'HH:MM'
+  horario_fim?: string | null;           // 'HH:MM'
+  variacao_texto_ativa: boolean;
   criado_em: string;
   atualizado_em: string;
 }
@@ -57,6 +63,11 @@ export interface TelefoneCreate {
   instancia_evolution: string;
   nome_fantasia?: string | null;
   status?: StatusTelefone;
+  intervalo_min_minutos?: number | null;
+  limite_diario?: number | null;
+  horario_inicio?: string | null;
+  horario_fim?: string | null;
+  variacao_texto_ativa?: boolean;
 }
 
 export type TelefoneUpdate = Partial<TelefoneCreate>;

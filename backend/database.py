@@ -46,6 +46,17 @@ def _run_migrations(conn) -> None:
         # (table, column, ALTER SQL)
         ("clientes", "plano_id", "ALTER TABLE clientes ADD COLUMN plano_id INTEGER"),
         ("clientes", "grupo_id", "ALTER TABLE clientes ADD COLUMN grupo_id INTEGER"),
+        # telefones_whatsapp: configs anti-banimento por número
+        ("telefones_whatsapp", "intervalo_min_minutos",
+         "ALTER TABLE telefones_whatsapp ADD COLUMN intervalo_min_minutos INTEGER"),
+        ("telefones_whatsapp", "limite_diario",
+         "ALTER TABLE telefones_whatsapp ADD COLUMN limite_diario INTEGER"),
+        ("telefones_whatsapp", "horario_inicio",
+         "ALTER TABLE telefones_whatsapp ADD COLUMN horario_inicio TEXT"),
+        ("telefones_whatsapp", "horario_fim",
+         "ALTER TABLE telefones_whatsapp ADD COLUMN horario_fim TEXT"),
+        ("telefones_whatsapp", "variacao_texto_ativa",
+         "ALTER TABLE telefones_whatsapp ADD COLUMN variacao_texto_ativa BOOLEAN DEFAULT 0"),
     ]
     for table, column, ddl in migrations:
         existing = {

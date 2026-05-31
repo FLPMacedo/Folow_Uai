@@ -9,6 +9,9 @@ import ErrorBanner from "../components/ErrorBanner";
 
 const emptyForm: TelefoneCreate = {
   numero: "", instancia_evolution: "", status: "ativo",
+  intervalo_min_minutos: null, limite_diario: null,
+  horario_inicio: null, horario_fim: null,
+  variacao_texto_ativa: false,
 };
 
 export default function TelefonesPage() {
@@ -43,6 +46,11 @@ export default function TelefonesPage() {
       instancia_evolution: t.instancia_evolution,
       nome_fantasia: t.nome_fantasia ?? undefined,
       status: t.status,
+      intervalo_min_minutos: t.intervalo_min_minutos ?? null,
+      limite_diario: t.limite_diario ?? null,
+      horario_inicio: t.horario_inicio ?? null,
+      horario_fim: t.horario_fim ?? null,
+      variacao_texto_ativa: t.variacao_texto_ativa ?? false,
     });
     setModalOpen(true);
   };
@@ -139,6 +147,45 @@ export default function TelefonesPage() {
             <option value="inativo">Inativo</option>
             <option value="bloqueado">Bloqueado</option>
           </select></label>
+
+          <div className="span2" style={{ borderTop: "1px solid #e5e7eb",
+            paddingTop: 12, marginTop: 4 }}>
+            <strong>Anti-banimento</strong>
+            <div className="muted" style={{ fontSize: 11, marginTop: 2 }}>
+              Deixe em branco para usar os padrões globais.
+            </div>
+          </div>
+
+          <label>Intervalo entre envios (min)
+            <input type="number" min={0}
+              placeholder="padrão 5"
+              value={form.intervalo_min_minutos ?? ""}
+              onChange={(e) => setForm({
+                ...form,
+                intervalo_min_minutos: e.target.value ? Number(e.target.value) : null,
+              })} />
+          </label>
+          <label>Limite diário de envios
+            <input type="number" min={0}
+              placeholder="ilimitado"
+              value={form.limite_diario ?? ""}
+              onChange={(e) => setForm({
+                ...form,
+                limite_diario: e.target.value ? Number(e.target.value) : null,
+              })} />
+          </label>
+          <label>Horário início (HH:MM)
+            <input type="time" value={form.horario_inicio ?? ""}
+              onChange={(e) => setForm({ ...form, horario_inicio: e.target.value || null })} />
+          </label>
+          <label>Horário fim (HH:MM)
+            <input type="time" value={form.horario_fim ?? ""}
+              onChange={(e) => setForm({ ...form, horario_fim: e.target.value || null })} />
+          </label>
+          <label>Variação de texto<input type="checkbox"
+            checked={form.variacao_texto_ativa ?? false}
+            onChange={(e) => setForm({ ...form, variacao_texto_ativa: e.target.checked })} />
+          </label>
         </div>
       </Modal>
 

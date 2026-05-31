@@ -8,11 +8,12 @@ o Envio é criado com status `pendente` — próximo tick do scheduler pega.
 """
 from __future__ import annotations
 
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, time as time_t, timedelta, timezone
 from pathlib import Path
 from typing import Optional, Protocol
 
 from loguru import logger
+from sqlalchemy import func
 from sqlmodel import Session, select
 
 from backend.config import settings
@@ -73,11 +74,13 @@ class Sender:
         *,
         now: Optional[datetime] = None,
     ) -> Optional[TelefoneWhatsApp]:
-        """Devolve telefone ativo com `ultimo_envio` mais antigo respeitando
-        intervalo mínimo, ou None se todos estão em cooldown."""
+        """Devolve telefone ativo elegível considerando, por número:
+        - intervalo mínimo (override per-telefone ou global do Sender)
+        - limite diário de envios
+        - janela horária permitida (horario_inicio / horario_fim)
+        Rotação: o disponível com `ultimo_envio` mais antigo (NULL primeiro).
+        """
         now = now or _utcnow()
-        cutoff = now - timedelta(minutes=self.intervalo_min)
-
         ativos = session.exec(
             select(TelefoneWhatsApp)
             .where(TelefoneWhatsApp.status == StatusTelefone.ativo)
@@ -85,20 +88,69 @@ class Sender:
         if not ativos:
             return None
 
-        # disponíveis: nunca enviou OU enviou antes do cutoff
-        disponiveis = [
-            t for t in ativos
-            if t.ultimo_envio is None or _ensure_aware(t.ultimo_envio) <= cutoff
-        ]
-        if not disponiveis:
-            return None
+        elegiveis: list[TelefoneWhatsApp] = []
+        for t in ativos:
+            if not self._respeita_cooldown(t, now):
+                continue
+            if not self._dentro_janela(t, now):
+                continue
+            if not self._abaixo_limite_diario(session, t, now):
+                continue
+            elegiveis.append(t)
 
-        # rotação: ordena por (ultimo_envio asc), NULL primeiro, depois total_envios asc
-        disponiveis.sort(key=lambda t: (
+        if not elegiveis:
+            return None
+        elegiveis.sort(key=lambda t: (
             _ensure_aware(t.ultimo_envio) or datetime.min.replace(tzinfo=timezone.utc),
             t.total_envios,
         ))
-        return disponiveis[0]
+        return elegiveis[0]
+
+    # ---- validações por número ----
+    def _respeita_cooldown(self, t: TelefoneWhatsApp, now: datetime) -> bool:
+        if t.ultimo_envio is None:
+            return True
+        intervalo = t.intervalo_min_minutos
+        if intervalo is None:
+            intervalo = self.intervalo_min
+        if intervalo <= 0:
+            return True
+        cutoff = now - timedelta(minutes=intervalo)
+        return _ensure_aware(t.ultimo_envio) <= cutoff
+
+    def _dentro_janela(self, t: TelefoneWhatsApp, now: datetime) -> bool:
+        if not t.horario_inicio or not t.horario_fim:
+            return True
+        try:
+            ini = _parse_hhmm(t.horario_inicio)
+            fim = _parse_hhmm(t.horario_fim)
+        except ValueError:
+            logger.warning("Janela inválida tel={}: ini={!r} fim={!r}",
+                           t.id, t.horario_inicio, t.horario_fim)
+            return True
+        agora = now.time()
+        if ini <= fim:
+            return ini <= agora <= fim
+        # janela cruza meia-noite (ex: 22:00 → 06:00)
+        return agora >= ini or agora <= fim
+
+    def _abaixo_limite_diario(
+        self, session: Session, t: TelefoneWhatsApp, now: datetime,
+    ) -> bool:
+        if t.limite_diario is None or t.limite_diario <= 0:
+            return True
+        inicio_dia = now.replace(hour=0, minute=0, second=0, microsecond=0)
+        total = session.exec(
+            select(func.count(Envio.id)).where(
+                Envio.telefone_whatsapp_id == t.id,
+                Envio.status == StatusEnvio.enviado,
+                Envio.enviado_em >= inicio_dia,
+            )
+        ).one()
+        # SQLModel devolve int direto pra count
+        if isinstance(total, tuple):
+            total = total[0]
+        return int(total or 0) < t.limite_diario
 
     # ---- envio ----
     def send_text(
@@ -207,6 +259,11 @@ class Sender:
         session.commit()
         session.refresh(envio)
         return envio
+
+
+def _parse_hhmm(s: str) -> time_t:
+    h, m = s.strip().split(":")
+    return time_t(hour=int(h), minute=int(m))
 
 
 def _extract_msg_id(resp: dict) -> Optional[str]:

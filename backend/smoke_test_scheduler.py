@@ -517,11 +517,122 @@ def test_dispatch_evento() -> None:
               f"textos={texts}")
 
 
+def test_sender_per_phone_configs() -> None:
+    """Configs anti-banimento por número: intervalo override, limite diário, janela horária."""
+    fresh_db()
+    fake = FakeGateway()
+    sender = Sender(fake, intervalo_min=5)  # default global
+    t0 = datetime(2026, 5, 31, 12, 0, tzinfo=timezone.utc)  # meio-dia
+
+    with Session(engine) as s:
+        # tel A com intervalo override 60min (mais restritivo que global)
+        tA = TelefoneWhatsApp(
+            numero="+5531900000100", instancia_evolution="A",
+            status=StatusTelefone.ativo, intervalo_min_minutos=60,
+        )
+        # tel B com limite diário 2
+        tB = TelefoneWhatsApp(
+            numero="+5531900000101", instancia_evolution="B",
+            status=StatusTelefone.ativo, limite_diario=2,
+        )
+        s.add_all([tA, tB]); s.commit()
+        for t in (tA, tB): s.refresh(t)
+
+        c = Cliente(nome="C", telefone="+5531999999999",
+                    data_inicio_parceria=date.today() - timedelta(days=10))
+        s.add(c); s.commit(); s.refresh(c)
+
+        # 1º envio: A escolhido (NULL ultimo, total_envios=0 ambos)
+        e1 = sender.send_text(s, c, "msg1", modulo=Modulo.comemorativo, now=t0)
+        check("Per-phone: envio 1 OK", e1.status == StatusEnvio.enviado,
+              f"used={e1.telefone_whatsapp_id}")
+
+        # 30 min depois: A em cooldown (override 60min); B disponível
+        e2 = sender.send_text(s, c, "msg2", modulo=Modulo.comemorativo,
+                              now=t0 + timedelta(minutes=30))
+        check("Per-phone: A em cooldown 60min, B usado",
+              e2.status == StatusEnvio.enviado and e2.telefone_whatsapp_id == tB.id,
+              f"used={e2.telefone_whatsapp_id}")
+
+        # +10min: ambos em cooldown global 5min, mas A ainda em override 60min, B liberado em 5min
+        e3 = sender.send_text(s, c, "msg3", modulo=Modulo.comemorativo,
+                              now=t0 + timedelta(minutes=40))
+        check("Per-phone: B reutilizado após cooldown global 5min",
+              e3.status == StatusEnvio.enviado and e3.telefone_whatsapp_id == tB.id,
+              f"used={e3.telefone_whatsapp_id}")
+
+        # +5min: B atingiu limite diário 2 → A ainda em cooldown 60min → pendente
+        e4 = sender.send_text(s, c, "msg4", modulo=Modulo.comemorativo,
+                              now=t0 + timedelta(minutes=45))
+        check("Per-phone: B atinge limite_diario=2, A em cooldown → pendente",
+              e4.status == StatusEnvio.pendente,
+              f"status={e4.status} used={e4.telefone_whatsapp_id}")
+
+
+def test_sender_horario_janela() -> None:
+    """Janela horária por número."""
+    fresh_db()
+    fake = FakeGateway()
+    sender = Sender(fake, intervalo_min=0)
+
+    with Session(engine) as s:
+        # tel só permite 09:00-18:00
+        tel = TelefoneWhatsApp(
+            numero="+5531900000200", instancia_evolution="janela",
+            status=StatusTelefone.ativo,
+            horario_inicio="09:00", horario_fim="18:00",
+        )
+        s.add(tel); s.commit(); s.refresh(tel)
+        c = Cliente(nome="C", telefone="+5531999999999",
+                    data_inicio_parceria=date.today() - timedelta(days=10))
+        s.add(c); s.commit(); s.refresh(c)
+
+        # 23:00 UTC → fora da janela → pendente
+        tarde = datetime(2026, 5, 31, 23, 0, tzinfo=timezone.utc)
+        e_off = sender.send_text(s, c, "fora", modulo=Modulo.comemorativo, now=tarde)
+        check("Janela: fora do horário → pendente",
+              e_off.status == StatusEnvio.pendente,
+              f"status={e_off.status}")
+
+        # 14:00 UTC → dentro
+        meio = datetime(2026, 5, 31, 14, 0, tzinfo=timezone.utc)
+        e_on = sender.send_text(s, c, "dentro", modulo=Modulo.comemorativo, now=meio)
+        check("Janela: dentro do horário → enviado",
+              e_on.status == StatusEnvio.enviado,
+              f"status={e_on.status}")
+
+        # janela noturna (22:00 → 06:00, cruza meia-noite)
+        tel2 = TelefoneWhatsApp(
+            numero="+5531900000201", instancia_evolution="janela-noite",
+            status=StatusTelefone.ativo,
+            horario_inicio="22:00", horario_fim="06:00",
+        )
+        # desativa o anterior pra isolar
+        tel.status = StatusTelefone.inativo
+        s.add_all([tel, tel2]); s.commit(); s.refresh(tel2)
+
+        e_noite = sender.send_text(s, c, "23h", modulo=Modulo.comemorativo, now=tarde)
+        check("Janela noturna cruza 0h: 23h → enviado",
+              e_noite.status == StatusEnvio.enviado, f"status={e_noite.status}")
+
+        manha = datetime(2026, 5, 31, 3, 0, tzinfo=timezone.utc)
+        e_3am = sender.send_text(s, c, "3am", modulo=Modulo.comemorativo, now=manha)
+        check("Janela noturna: 03:00 → enviado",
+              e_3am.status == StatusEnvio.enviado, f"status={e_3am.status}")
+
+        meio_dia = datetime(2026, 5, 31, 12, 0, tzinfo=timezone.utc)
+        e_meio = sender.send_text(s, c, "meio", modulo=Modulo.comemorativo, now=meio_dia)
+        check("Janela noturna: 12:00 → pendente",
+              e_meio.status == StatusEnvio.pendente, f"status={e_meio.status}")
+
+
 def main() -> int:
     print(f"DB: {settings.DB_PATH}")
     test_templates()
     test_sender_rotation_and_cooldown()
     test_sender_gateway_failure()
+    test_sender_per_phone_configs()
+    test_sender_horario_janela()
     test_dispatch_comemorativo()
     test_dispatch_expiracao()
     test_dispatch_pos_venda()
