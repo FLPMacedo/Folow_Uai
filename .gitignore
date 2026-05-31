@@ -1,0 +1,53 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+env/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Env
+.env
+.env.local
+backend/.env
+
+# SQLite
+database/*.db
+database/*.db-journal
+database/*.db-wal
+database/*.db-shm
+
+# Docker volumes
+docker/evolution-data/
+docker/mongodb-data/
+
+# Backups
+backups/*.tar.gz
+backups/*.zip
+backups/*.sqlite
+
+# Frontend / Electron
+frontend/node_modules/
+frontend/dist/
+frontend/.next/
+frontend/out/
+
+# Logs
+*.log
+logs/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+.DS_Store
+Thumbs.db
+
+# Images uploadadas pelo usuário (manter pastas, ignorar conteúdo)
+images/birthdays/*
+images/events/*
+!images/birthdays/.gitkeep
+!images/events/.gitkeep

@@ -1,0 +1,56 @@
+services:
+  evolution-api:
+    # Fork ativamente mantido. 'atendai/evolution-api' parou em fev/2025 e
+    # o protocolo WhatsApp mudou várias vezes desde então.
+    image: evoapicloud/evolution-api:latest
+    container_name: evolution-api-followuai
+    restart: always
+    ports:
+      - "8080:8080"
+    env_file:
+      - ./evolution.env
+    volumes:
+      - ./evolution-data:/evolution/instances
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    networks:
+      - followuai-network
+
+  postgres:
+    image: postgres:16-alpine
+    container_name: postgres-evolution
+    restart: always
+    environment:
+      POSTGRES_USER: evolution
+      POSTGRES_PASSWORD: evolution_pw_change_me
+      POSTGRES_DB: evolution
+    ports:
+      - "127.0.0.1:5432:5432"
+    volumes:
+      - ./postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U evolution -d evolution"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks:
+      - followuai-network
+
+  redis:
+    image: redis:7-alpine
+    container_name: redis-evolution
+    restart: always
+    command: ["redis-server", "--appendonly", "yes"]
+    ports:
+      - "127.0.0.1:6379:6379"
+    volumes:
+      - ./redis-data:/data
+    networks:
+      - followuai-network
+
+networks:
+  followuai-network:
+    driver: bridge
