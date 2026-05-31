@@ -333,3 +333,37 @@ CREATE TABLE IF NOT EXISTS negocios (
 
 CREATE INDEX IF NOT EXISTS idx_negocios_ativo ON negocios(ativo);
 CREATE INDEX IF NOT EXISTS idx_negocios_default ON negocios(is_default);
+
+-- ============================================================================
+-- planos_servicos — catálogo de planos/serviços do negócio
+-- Cliente.plano (texto livre legado) vai ser linkado a um plano_servico_id
+-- na etapa 4 do post-MVP roadmap.
+-- ============================================================================
+CREATE TABLE IF NOT EXISTS planos_servicos (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    nome TEXT NOT NULL UNIQUE,
+    descricao TEXT,
+    preco REAL,
+    periodicidade TEXT,        -- 'mensal' | 'anual' | 'unico'
+    duracao_dias INTEGER,       -- usado pra calcular data_fim do Plano
+    ativo BOOLEAN DEFAULT 1,
+    criado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    atualizado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_planos_servicos_ativo ON planos_servicos(ativo);
+
+-- ============================================================================
+-- grupos — categorias de clientes (diferente de tags: 1 cliente = 1 grupo)
+-- ============================================================================
+CREATE TABLE IF NOT EXISTS grupos (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    nome TEXT NOT NULL UNIQUE,
+    cor TEXT,                   -- hex ex '#FF5733'
+    descricao TEXT,
+    ativo BOOLEAN DEFAULT 1,
+    criado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    atualizado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_grupos_ativo ON grupos(ativo);

@@ -302,6 +302,38 @@ class Tag(SQLModel, table=True):
 
 
 # ============================================================================
+# planos_servicos — catálogo
+# ============================================================================
+class PlanoServico(SQLModel, table=True):
+    __tablename__ = "planos_servicos"
+
+    id: Optional[int] = Field(default=None, primary_key=True)
+    nome: str = Field(unique=True)
+    descricao: Optional[str] = None
+    preco: Optional[float] = None
+    periodicidade: Optional[str] = None       # 'mensal' | 'anual' | 'unico'
+    duracao_dias: Optional[int] = None
+    ativo: bool = True
+    criado_em: datetime = Field(default_factory=utcnow)
+    atualizado_em: datetime = Field(default_factory=utcnow)
+
+
+# ============================================================================
+# grupos — categorias de clientes
+# ============================================================================
+class Grupo(SQLModel, table=True):
+    __tablename__ = "grupos"
+
+    id: Optional[int] = Field(default=None, primary_key=True)
+    nome: str = Field(unique=True)
+    cor: Optional[str] = None
+    descricao: Optional[str] = None
+    ativo: bool = True
+    criado_em: datetime = Field(default_factory=utcnow)
+    atualizado_em: datetime = Field(default_factory=utcnow)
+
+
+# ============================================================================
 # negocios — multi-empresa
 # ============================================================================
 class Negocio(SQLModel, table=True):

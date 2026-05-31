@@ -10,11 +10,17 @@ import type {
   Evento,
   EventoCreate,
   EventoUpdate,
+  Grupo,
+  GrupoCreate,
+  GrupoUpdate,
   ImportResult,
   ModuloStats,
   Negocio,
   NegocioCreate,
   NegocioUpdate,
+  PlanoServico,
+  PlanoServicoCreate,
+  PlanoServicoUpdate,
   Telefone,
   TelefoneCreate,
   TelefoneUpdate,
@@ -178,3 +184,35 @@ export const updateNegocio = (id: number, payload: NegocioUpdate) =>
 
 export const deleteNegocio = (id: number) =>
   api.delete(`/negocios/${id}`);
+
+// =========================================================================
+// Planos & Serviços (catálogo)
+// =========================================================================
+export const listPlanos = (ativo?: boolean) =>
+  api.get<PlanoServico[]>("/planos-servicos",
+    ativo === undefined ? undefined : { ativo });
+
+export const createPlano = (payload: PlanoServicoCreate) =>
+  api.post<PlanoServico>("/planos-servicos", payload);
+
+export const updatePlano = (id: number, payload: PlanoServicoUpdate) =>
+  api.put<PlanoServico>(`/planos-servicos/${id}`, payload);
+
+export const deletePlano = (id: number) =>
+  api.delete(`/planos-servicos/${id}`);
+
+// =========================================================================
+// Grupos
+// =========================================================================
+export const listGrupos = (ativo?: boolean) =>
+  api.get<Grupo[]>("/grupos",
+    ativo === undefined ? undefined : { ativo });
+
+export const createGrupo = (payload: GrupoCreate) =>
+  api.post<Grupo>("/grupos", payload);
+
+export const updateGrupo = (id: number, payload: GrupoUpdate) =>
+  api.put<Grupo>(`/grupos/${id}`, payload);
+
+export const deleteGrupo = (id: number) =>
+  api.delete(`/grupos/${id}`);

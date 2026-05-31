@@ -129,6 +129,48 @@ export interface DispatchStats {
   ignorados: number;
 }
 
+export interface PlanoServico {
+  id: number;
+  nome: string;
+  descricao?: string | null;
+  preco?: number | null;
+  periodicidade?: string | null;
+  duracao_dias?: number | null;
+  ativo: boolean;
+  criado_em: string;
+  atualizado_em: string;
+}
+
+export interface PlanoServicoCreate {
+  nome: string;
+  descricao?: string | null;
+  preco?: number | null;
+  periodicidade?: string | null;
+  duracao_dias?: number | null;
+  ativo?: boolean;
+}
+
+export type PlanoServicoUpdate = Partial<PlanoServicoCreate>;
+
+export interface Grupo {
+  id: number;
+  nome: string;
+  cor?: string | null;
+  descricao?: string | null;
+  ativo: boolean;
+  criado_em: string;
+  atualizado_em: string;
+}
+
+export interface GrupoCreate {
+  nome: string;
+  cor?: string | null;
+  descricao?: string | null;
+  ativo?: boolean;
+}
+
+export type GrupoUpdate = Partial<GrupoCreate>;
+
 export interface Negocio {
   id: number;
   nome: string;

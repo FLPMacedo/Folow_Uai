@@ -79,6 +79,44 @@ class TemplateCreate(SQLModel):
 
 
 # ============================================================================
+# Plano de Serviço (catálogo)
+# ============================================================================
+class PlanoServicoCreate(SQLModel):
+    nome: str
+    descricao: Optional[str] = None
+    preco: Optional[float] = None
+    periodicidade: Optional[str] = None
+    duracao_dias: Optional[int] = None
+    ativo: bool = True
+
+
+class PlanoServicoUpdate(SQLModel):
+    nome: Optional[str] = None
+    descricao: Optional[str] = None
+    preco: Optional[float] = None
+    periodicidade: Optional[str] = None
+    duracao_dias: Optional[int] = None
+    ativo: Optional[bool] = None
+
+
+# ============================================================================
+# Grupo (categoria de cliente)
+# ============================================================================
+class GrupoCreate(SQLModel):
+    nome: str
+    cor: Optional[str] = None
+    descricao: Optional[str] = None
+    ativo: bool = True
+
+
+class GrupoUpdate(SQLModel):
+    nome: Optional[str] = None
+    cor: Optional[str] = None
+    descricao: Optional[str] = None
+    ativo: Optional[bool] = None
+
+
+# ============================================================================
 # Negócio (multi-empresa)
 # ============================================================================
 class NegocioCreate(SQLModel):
@@ -166,6 +204,8 @@ __all__ = [
     "TemplateCreate", "TemplateUpdate",
     "EventoCreate", "EventoUpdate",
     "NegocioCreate", "NegocioUpdate",
+    "PlanoServicoCreate", "PlanoServicoUpdate",
+    "GrupoCreate", "GrupoUpdate",
     "WebhookEvent", "ModuloStats",
     "Modulo", "StatusCliente", "StatusEnvio", "StatusTelefone",
     "StatusCampanha", "TipoComemorativo", "TipoEvento",
