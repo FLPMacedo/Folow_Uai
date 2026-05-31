@@ -217,6 +217,16 @@ export type NegocioUpdate = Partial<NegocioCreate>;
 
 export type TipoEvento = "pos_venda" | "evento";
 
+export interface AgendaItem {
+  data: string;                  // YYYY-MM-DD
+  modulo: string;
+  cliente_id: number;
+  cliente_nome: string;
+  telefone: string;
+  titulo: string;
+  ja_processado: boolean;
+}
+
 export interface Evento {
   id: number;
   cliente_id: number;

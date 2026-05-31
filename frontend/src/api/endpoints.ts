@@ -1,6 +1,7 @@
 // Endpoints tipados — todos retornam Promise<T>.
 import { api, API_BASE } from "./client";
 import type {
+  AgendaItem,
   Backup,
   Cliente,
   ClienteCreate,
@@ -216,3 +217,9 @@ export const updateGrupo = (id: number, payload: GrupoUpdate) =>
 
 export const deleteGrupo = (id: number) =>
   api.delete(`/grupos/${id}`);
+
+// =========================================================================
+// Agenda (preview de disparos futuros)
+// =========================================================================
+export const getAgenda = (from: string, to: string) =>
+  api.get<AgendaItem[]>("/agenda", { from, to });
