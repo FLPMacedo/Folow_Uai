@@ -302,6 +302,26 @@ class Tag(SQLModel, table=True):
 
 
 # ============================================================================
+# negocios — multi-empresa
+# ============================================================================
+class Negocio(SQLModel, table=True):
+    __tablename__ = "negocios"
+
+    id: Optional[int] = Field(default=None, primary_key=True)
+    nome: str
+    endereco: Optional[str] = None
+    telefone_contato: Optional[str] = None
+    whatsapp_duvidas: Optional[str] = None
+    email: Optional[str] = None
+    site: Optional[str] = None
+    descricao: Optional[str] = None
+    is_default: bool = False
+    ativo: bool = True
+    criado_em: datetime = Field(default_factory=utcnow)
+    atualizado_em: datetime = Field(default_factory=utcnow)
+
+
+# ============================================================================
 # backups (audit log)
 # ============================================================================
 class Backup(SQLModel, table=True):

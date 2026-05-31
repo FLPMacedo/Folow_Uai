@@ -73,10 +73,13 @@ def derive_cliente_vars(
     *,
     today: Optional[date] = None,
     extras: Optional[Mapping[str, Any]] = None,
+    negocio: Any = None,
 ) -> dict[str, Any]:
     """Calcula variáveis comuns a partir de Cliente SQLModel ou dict.
 
-    `extras` mescla por cima (ex: passar dias_restantes do plano específico).
+    `extras` mescla por cima (ex: dias_restantes do plano específico).
+    `negocio` (opcional) adiciona {empresa_*}. Quando None, jobs decidem
+    se buscam o negócio default — não force aqui pra evitar I/O surpresa.
     """
     today = today or date.today()
     get = (lambda k: cliente.get(k)) if isinstance(cliente, dict) \
@@ -95,6 +98,31 @@ def derive_cliente_vars(
         "dias_parceria":   dias_parc,
         "tempo_parceria":  _tempo_parceria(dias_parc),
     }
+    if negocio is not None:
+        out.update(derive_negocio_vars(negocio))
     if extras:
         out.update(extras)
     return out
+
+
+def derive_negocio_vars(negocio: Any) -> dict[str, str]:
+    """Variáveis de empresa pra usar em templates.
+
+    Aceita SQLModel Negocio, dict ou None. None → todas vazias.
+    """
+    if negocio is None:
+        return {
+            "empresa_nome": "", "empresa_endereco": "",
+            "empresa_telefone": "", "empresa_whatsapp": "",
+            "empresa_email": "", "empresa_site": "",
+        }
+    get = (lambda k: negocio.get(k)) if isinstance(negocio, dict) \
+        else (lambda k: getattr(negocio, k, None))
+    return {
+        "empresa_nome":     get("nome") or "",
+        "empresa_endereco": get("endereco") or "",
+        "empresa_telefone": get("telefone_contato") or "",
+        "empresa_whatsapp": get("whatsapp_duvidas") or "",
+        "empresa_email":    get("email") or "",
+        "empresa_site":     get("site") or "",
+    }

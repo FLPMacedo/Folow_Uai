@@ -79,6 +79,33 @@ class TemplateCreate(SQLModel):
 
 
 # ============================================================================
+# Negócio (multi-empresa)
+# ============================================================================
+class NegocioCreate(SQLModel):
+    nome: str
+    endereco: Optional[str] = None
+    telefone_contato: Optional[str] = None
+    whatsapp_duvidas: Optional[str] = None
+    email: Optional[str] = None
+    site: Optional[str] = None
+    descricao: Optional[str] = None
+    is_default: bool = False
+    ativo: bool = True
+
+
+class NegocioUpdate(SQLModel):
+    nome: Optional[str] = None
+    endereco: Optional[str] = None
+    telefone_contato: Optional[str] = None
+    whatsapp_duvidas: Optional[str] = None
+    email: Optional[str] = None
+    site: Optional[str] = None
+    descricao: Optional[str] = None
+    is_default: Optional[bool] = None
+    ativo: Optional[bool] = None
+
+
+# ============================================================================
 # Evento (pós-venda + evento agendado)
 # ============================================================================
 class EventoCreate(SQLModel):
@@ -138,6 +165,7 @@ __all__ = [
     "TelefoneCreate", "TelefoneUpdate",
     "TemplateCreate", "TemplateUpdate",
     "EventoCreate", "EventoUpdate",
+    "NegocioCreate", "NegocioUpdate",
     "WebhookEvent", "ModuloStats",
     "Modulo", "StatusCliente", "StatusEnvio", "StatusTelefone",
     "StatusCampanha", "TipoComemorativo", "TipoEvento",

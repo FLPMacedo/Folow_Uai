@@ -3,6 +3,7 @@ import ClientesPage from "./pages/ClientesPage";
 import TelefonesPage from "./pages/TelefonesPage";
 import TemplatesPage from "./pages/TemplatesPage";
 import EventosPage from "./pages/EventosPage";
+import MeuNegocioPage from "./pages/MeuNegocioPage";
 import RelatoriosPage from "./pages/RelatoriosPage";
 import AdminPage from "./pages/AdminPage";
 import HealthBadge from "./components/HealthBadge";
@@ -12,6 +13,7 @@ const NAV = [
   { to: "/telefones",  label: "Telefones" },
   { to: "/eventos",    label: "Eventos" },
   { to: "/templates",  label: "Templates" },
+  { to: "/meu-negocio", label: "Meu Negócio" },
   { to: "/relatorios", label: "Relatórios" },
   { to: "/admin",      label: "Admin" },
 ];
@@ -37,12 +39,13 @@ export default function App() {
       <main className="content">
         <Routes>
           <Route path="/" element={<Navigate to="/clientes" replace />} />
-          <Route path="/clientes"   element={<ClientesPage />} />
-          <Route path="/telefones"  element={<TelefonesPage />} />
-          <Route path="/eventos"    element={<EventosPage />} />
-          <Route path="/templates"  element={<TemplatesPage />} />
-          <Route path="/relatorios" element={<RelatoriosPage />} />
-          <Route path="/admin"      element={<AdminPage />} />
+          <Route path="/clientes"    element={<ClientesPage />} />
+          <Route path="/telefones"   element={<TelefonesPage />} />
+          <Route path="/eventos"     element={<EventosPage />} />
+          <Route path="/templates"   element={<TemplatesPage />} />
+          <Route path="/meu-negocio" element={<MeuNegocioPage />} />
+          <Route path="/relatorios"  element={<RelatoriosPage />} />
+          <Route path="/admin"       element={<AdminPage />} />
         </Routes>
       </main>
     </div>

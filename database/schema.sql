@@ -309,3 +309,27 @@ SELECT 'Sumiu Por Quê? - Reativação', 'sumiu', '30_dias_inativo',
        'Vem pro rolê!',
        '["nome","dias_inativo"]', 1
 WHERE NOT EXISTS (SELECT 1 FROM templates WHERE nome = 'Sumiu Por Quê? - Reativação');
+
+-- ============================================================================
+-- negocios — multi-empresa (added v1.1)
+-- Variáveis em templates: {empresa_nome}, {empresa_endereco},
+-- {empresa_telefone}, {empresa_whatsapp}, {empresa_email}, {empresa_site}.
+-- Apenas 1 com is_default=1 — backend mantém invariante.
+-- ============================================================================
+CREATE TABLE IF NOT EXISTS negocios (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    nome TEXT NOT NULL,
+    endereco TEXT,
+    telefone_contato TEXT,
+    whatsapp_duvidas TEXT,
+    email TEXT,
+    site TEXT,
+    descricao TEXT,
+    is_default BOOLEAN DEFAULT 0,
+    ativo BOOLEAN DEFAULT 1,
+    criado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    atualizado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_negocios_ativo ON negocios(ativo);
+CREATE INDEX IF NOT EXISTS idx_negocios_default ON negocios(is_default);

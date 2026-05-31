@@ -129,6 +129,35 @@ export interface DispatchStats {
   ignorados: number;
 }
 
+export interface Negocio {
+  id: number;
+  nome: string;
+  endereco?: string | null;
+  telefone_contato?: string | null;
+  whatsapp_duvidas?: string | null;
+  email?: string | null;
+  site?: string | null;
+  descricao?: string | null;
+  is_default: boolean;
+  ativo: boolean;
+  criado_em: string;
+  atualizado_em: string;
+}
+
+export interface NegocioCreate {
+  nome: string;
+  endereco?: string | null;
+  telefone_contato?: string | null;
+  whatsapp_duvidas?: string | null;
+  email?: string | null;
+  site?: string | null;
+  descricao?: string | null;
+  is_default?: boolean;
+  ativo?: boolean;
+}
+
+export type NegocioUpdate = Partial<NegocioCreate>;
+
 export type TipoEvento = "pos_venda" | "evento";
 
 export interface Evento {

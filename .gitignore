@@ -23,6 +23,8 @@ database/*.db-shm
 # Docker volumes
 docker/evolution-data/
 docker/mongodb-data/
+docker/postgres-data/
+docker/redis-data/
 
 # Backups
 backups/*.tar.gz

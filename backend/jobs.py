@@ -21,6 +21,7 @@ from backend.models import (
     Envio,
     Evento,
     Modulo,
+    Negocio,
     Plano,
     StatusCliente,
     StatusEnvio,
@@ -30,6 +31,22 @@ from backend.models import (
 )
 from backend.sender import Sender
 from backend.templates import derive_cliente_vars, render
+
+
+def _default_negocio(session: Session) -> Optional[Negocio]:
+    """Negócio default (ou 1º ativo) — usado pra injetar vars de empresa."""
+    n = session.exec(
+        select(Negocio).where(
+            Negocio.is_default == True,  # noqa: E712
+            Negocio.ativo == True,        # noqa: E712
+        )
+    ).first()
+    if n:
+        return n
+    return session.exec(
+        select(Negocio).where(Negocio.ativo == True)  # noqa: E712
+        .order_by(Negocio.id)
+    ).first()
 
 MARCOS_PARCERIA: dict[int, TipoComemorativo] = {
     100:  TipoComemorativo.dias_100,
@@ -70,6 +87,7 @@ def dispatch_comemorativo(
     """
     today = today or date.today()
     stats = {"enviados": 0, "falhas": 0, "pendentes": 0, "ignorados": 0}
+    negocio = _default_negocio(session)
 
     clientes = session.exec(
         select(Cliente).where(Cliente.status == StatusCliente.ativo)
@@ -84,7 +102,7 @@ def dispatch_comemorativo(
             if not _ja_enviado_hoje(
                 session, c.id, TipoComemorativo.aniversario, today
             ):
-                vars_ = derive_cliente_vars(c, today=today)
+                vars_ = derive_cliente_vars(c, today=today, negocio=negocio)
                 msg = render(template_aniversario, vars_)
                 envio = sender.send_text(session, c, msg,
                                          modulo=Modulo.comemorativo)
@@ -101,9 +119,8 @@ def dispatch_comemorativo(
             dias = (today - c.data_inicio_parceria).days
             tipo = MARCOS_PARCERIA.get(dias)
             if tipo and not _ja_enviado_hoje(session, c.id, tipo, today):
-                vars_ = derive_cliente_vars(c, today=today, extras={
-                    "dias_parceria": dias,
-                })
+                vars_ = derive_cliente_vars(c, today=today, negocio=negocio,
+                                            extras={"dias_parceria": dias})
                 msg = render(template_marco, vars_)
                 envio = sender.send_text(session, c, msg,
                                          modulo=Modulo.comemorativo)
@@ -182,6 +199,7 @@ def dispatch_expiracao(
     """
     today = today or date.today()
     stats = {"enviados": 0, "falhas": 0, "pendentes": 0, "ignorados": 0}
+    negocio = _default_negocio(session)
 
     planos = session.exec(
         select(Plano).where(Plano.data_fim >= today)
@@ -202,7 +220,7 @@ def dispatch_expiracao(
             stats["ignorados"] += 1
             continue
 
-        vars_ = derive_cliente_vars(cliente, today=today, extras={
+        vars_ = derive_cliente_vars(cliente, today=today, negocio=negocio, extras={
             "dias_restantes": dias_rest,
             "data_expiracao": plano.data_fim.strftime("%d/%m/%Y"),
             "plano": plano.nome_plano,
@@ -266,6 +284,7 @@ def dispatch_pos_venda(
     """
     today = today or date.today()
     stats = {"enviados": 0, "falhas": 0, "pendentes": 0, "ignorados": 0}
+    negocio = _default_negocio(session)
 
     pos_eventos = session.exec(
         select(Evento).where(
@@ -294,7 +313,7 @@ def dispatch_pos_venda(
                 stats["ignorados"] += 1
                 continue
             texto = template.mensagem_texto if template else fallback
-            vars_ = derive_cliente_vars(cliente, today=today, extras={
+            vars_ = derive_cliente_vars(cliente, today=today, negocio=negocio, extras={
                 "produto": ev.nome_evento or "produto",
                 "data_compra": ev.data_compra.strftime("%d/%m/%Y"),
             })
@@ -336,6 +355,7 @@ def dispatch_evento(
     """
     today = today or date.today()
     stats = {"enviados": 0, "falhas": 0, "pendentes": 0, "ignorados": 0}
+    negocio = _default_negocio(session)
 
     evs = session.exec(
         select(Evento).where(Evento.tipo_evento == TipoEvento.evento)
@@ -358,7 +378,7 @@ def dispatch_evento(
             template = _find_template(session, Modulo.evento, tipo_gatilho)
             template_id = template.id if template else None
             texto = template.mensagem_texto if template else fallback
-            vars_ = derive_cliente_vars(cliente, today=today, extras={
+            vars_ = derive_cliente_vars(cliente, today=today, negocio=negocio, extras={
                 "nome_evento": ev.nome_evento,
                 "data_evento": ev.data_evento.strftime("%d/%m/%Y"),
             })

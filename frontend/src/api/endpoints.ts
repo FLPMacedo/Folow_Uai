@@ -12,6 +12,9 @@ import type {
   EventoUpdate,
   ImportResult,
   ModuloStats,
+  Negocio,
+  NegocioCreate,
+  NegocioUpdate,
   Telefone,
   TelefoneCreate,
   TelefoneUpdate,
@@ -155,3 +158,23 @@ export const updateEvento = (id: number, payload: EventoUpdate) =>
 
 export const deleteEvento = (id: number) =>
   api.delete(`/eventos/${id}`);
+
+// =========================================================================
+// Negócios (meu negócio / multi-empresa)
+// =========================================================================
+export const listNegocios = (ativo?: boolean) =>
+  api.get<Negocio[]>("/negocios", ativo === undefined ? undefined : { ativo });
+
+export const getNegocioDefault = () =>
+  api.get<Negocio | null>("/negocios/default");
+
+export const getNegocio = (id: number) => api.get<Negocio>(`/negocios/${id}`);
+
+export const createNegocio = (payload: NegocioCreate) =>
+  api.post<Negocio>("/negocios", payload);
+
+export const updateNegocio = (id: number, payload: NegocioUpdate) =>
+  api.put<Negocio>(`/negocios/${id}`, payload);
+
+export const deleteNegocio = (id: number) =>
+  api.delete(`/negocios/${id}`);
