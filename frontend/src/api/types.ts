@@ -14,8 +14,10 @@ export interface Cliente {
   email?: string | null;
   data_nascimento?: string | null;       // ISO YYYY-MM-DD
   data_inicio_parceria: string;
-  plano?: string | null;
-  grupo?: string | null;
+  plano?: string | null;                 // legado (texto livre)
+  grupo?: string | null;                 // legado (texto livre)
+  plano_id?: number | null;              // FK → planos_servicos
+  grupo_id?: number | null;              // FK → grupos
   status: StatusCliente;
   observacoes?: string | null;
   criado_em: string;
@@ -30,6 +32,8 @@ export interface ClienteCreate {
   data_inicio_parceria: string;
   plano?: string | null;
   grupo?: string | null;
+  plano_id?: number | null;
+  grupo_id?: number | null;
   status?: StatusCliente;
   observacoes?: string | null;
 }

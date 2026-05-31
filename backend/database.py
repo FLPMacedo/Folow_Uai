@@ -23,7 +23,7 @@ def _enable_sqlite_fk(dbapi_connection, connection_record):
 
 
 def init_db() -> None:
-    """Apply schema.sql idempotently. Creates DB file if absent."""
+    """Apply schema.sql idempotently + run migrations. Creates DB if absent."""
     db_path = Path(settings.DB_PATH)
     db_path.parent.mkdir(parents=True, exist_ok=True)
 
@@ -37,6 +37,32 @@ def init_db() -> None:
         for stmt in _split_sql(sql):
             if stmt.strip():
                 conn.exec_driver_sql(stmt)
+        _run_migrations(conn)
+
+
+def _run_migrations(conn) -> None:
+    """ALTER TABLE idempotente — SQLite não suporta IF NOT EXISTS em ADD COLUMN."""
+    migrations: list[tuple[str, str, str]] = [
+        # (table, column, ALTER SQL)
+        ("clientes", "plano_id", "ALTER TABLE clientes ADD COLUMN plano_id INTEGER"),
+        ("clientes", "grupo_id", "ALTER TABLE clientes ADD COLUMN grupo_id INTEGER"),
+    ]
+    for table, column, ddl in migrations:
+        existing = {
+            row[1] for row in conn.exec_driver_sql(
+                f"PRAGMA table_info({table})"
+            ).fetchall()
+        }
+        if column not in existing:
+            conn.exec_driver_sql(ddl)
+
+    # índices pós-migration
+    conn.exec_driver_sql(
+        "CREATE INDEX IF NOT EXISTS idx_clientes_plano_id ON clientes(plano_id)"
+    )
+    conn.exec_driver_sql(
+        "CREATE INDEX IF NOT EXISTS idx_clientes_grupo_id ON clientes(grupo_id)"
+    )
 
 
 def _split_sql(sql: str) -> list[str]:

@@ -86,8 +86,10 @@ class Cliente(SQLModel, table=True):
     email: Optional[str] = None
     data_nascimento: Optional[date] = None
     data_inicio_parceria: date
-    plano: Optional[str] = None
-    grupo: Optional[str] = None
+    plano: Optional[str] = None      # legado (texto livre, mantido pra compat)
+    grupo: Optional[str] = None      # legado (texto livre, mantido pra compat)
+    plano_id: Optional[int] = Field(default=None, foreign_key="planos_servicos.id")
+    grupo_id: Optional[int] = Field(default=None, foreign_key="grupos.id")
     status: StatusCliente = Field(default=StatusCliente.ativo, index=True)
     observacoes: Optional[str] = None
     criado_em: datetime = Field(default_factory=utcnow)

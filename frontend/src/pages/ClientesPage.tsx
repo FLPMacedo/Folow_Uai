@@ -1,9 +1,12 @@
 import { useEffect, useRef, useState } from "react";
 import {
   createCliente, deleteCliente, exportClientesXlsxUrl,
-  importClientesXlsx, listClientes, updateCliente,
+  importClientesXlsx, listClientes, listGrupos, listPlanos,
+  updateCliente,
 } from "../api/endpoints";
-import type { Cliente, ClienteCreate, ImportResult } from "../api/types";
+import type {
+  Cliente, ClienteCreate, Grupo, ImportResult, PlanoServico,
+} from "../api/types";
 import Modal from "../components/Modal";
 import ErrorBanner from "../components/ErrorBanner";
 
@@ -15,6 +18,8 @@ const empty: ClienteCreate = {
 
 export default function ClientesPage() {
   const [clientes, setClientes] = useState<Cliente[]>([]);
+  const [planos, setPlanos] = useState<PlanoServico[]>([]);
+  const [grupos, setGrupos] = useState<Grupo[]>([]);
   const [q, setQ] = useState("");
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<Cliente | null>(null);
@@ -24,10 +29,30 @@ export default function ClientesPage() {
   const fileRef = useRef<HTMLInputElement>(null);
 
   const load = async () => {
-    try { setClientes(await listClientes({ q: q || undefined })); }
-    catch (e) { setError(String(e)); }
+    try {
+      const [cs, ps, gs] = await Promise.all([
+        listClientes({ q: q || undefined }),
+        listPlanos(true),
+        listGrupos(true),
+      ]);
+      setClientes(cs); setPlanos(ps); setGrupos(gs);
+    } catch (e) { setError(String(e)); }
   };
   useEffect(() => { void load(); /* eslint-disable-next-line */ }, []);
+
+  const planoNome = (c: Cliente): string | null => {
+    if (c.plano_id) {
+      return planos.find((p) => p.id === c.plano_id)?.nome ?? `#${c.plano_id}`;
+    }
+    return c.plano ?? null;
+  };
+  const grupoInfo = (c: Cliente): { nome: string; cor?: string } | null => {
+    if (c.grupo_id) {
+      const g = grupos.find((x) => x.id === c.grupo_id);
+      return g ? { nome: g.nome, cor: g.cor ?? undefined } : { nome: `#${c.grupo_id}` };
+    }
+    return c.grupo ? { nome: c.grupo } : null;
+  };
 
   const openCreate = () => {
     setEditing(null); setForm(empty); setModalOpen(true);
@@ -39,6 +64,7 @@ export default function ClientesPage() {
       data_nascimento: c.data_nascimento ?? undefined,
       data_inicio_parceria: c.data_inicio_parceria,
       plano: c.plano ?? undefined, grupo: c.grupo ?? undefined,
+      plano_id: c.plano_id ?? null, grupo_id: c.grupo_id ?? null,
       status: c.status, observacoes: c.observacoes ?? undefined,
     });
     setModalOpen(true);
@@ -142,24 +168,40 @@ export default function ClientesPage() {
               </tr>
             </thead>
             <tbody>
-              {clientes.map((c) => (
-                <tr key={c.id}>
-                  <td>{c.nome}</td>
-                  <td>{c.telefone}</td>
-                  <td>{c.plano ?? <span className="muted">—</span>}</td>
-                  <td>{c.grupo ?? <span className="muted">—</span>}</td>
-                  <td>
-                    <span className={`badge ${c.status === "ativo" ? "ok" : "muted"}`}>
-                      {c.status}
-                    </span>
-                  </td>
-                  <td>{c.data_inicio_parceria}</td>
-                  <td className="btn-row" style={{ justifyContent: "flex-end" }}>
-                    <button className="btn" onClick={() => openEdit(c)}>Editar</button>
-                    <button className="btn danger" onClick={() => void remove(c)}>Del</button>
-                  </td>
-                </tr>
-              ))}
+              {clientes.map((c) => {
+                const planoNm = planoNome(c);
+                const grupoInf = grupoInfo(c);
+                return (
+                  <tr key={c.id}>
+                    <td>{c.nome}</td>
+                    <td>{c.telefone}</td>
+                    <td>{planoNm ?? <span className="muted">—</span>}</td>
+                    <td>
+                      {grupoInf ? (
+                        <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+                          {grupoInf.cor && (
+                            <span style={{
+                              width: 10, height: 10, borderRadius: 2,
+                              background: grupoInf.cor, display: "inline-block",
+                            }} />
+                          )}
+                          {grupoInf.nome}
+                        </span>
+                      ) : <span className="muted">—</span>}
+                    </td>
+                    <td>
+                      <span className={`badge ${c.status === "ativo" ? "ok" : "muted"}`}>
+                        {c.status}
+                      </span>
+                    </td>
+                    <td>{c.data_inicio_parceria}</td>
+                    <td className="btn-row" style={{ justifyContent: "flex-end" }}>
+                      <button className="btn" onClick={() => openEdit(c)}>Editar</button>
+                      <button className="btn danger" onClick={() => void remove(c)}>Del</button>
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         )}
@@ -185,10 +227,36 @@ export default function ClientesPage() {
             onChange={(e) => setForm({ ...form, data_nascimento: e.target.value || null })} /></label>
           <label>Data início parceria *<input type="date" value={form.data_inicio_parceria}
             onChange={(e) => setForm({ ...form, data_inicio_parceria: e.target.value })} /></label>
-          <label>Plano<input value={form.plano ?? ""}
-            onChange={(e) => setForm({ ...form, plano: e.target.value || null })} /></label>
-          <label>Grupo<input value={form.grupo ?? ""}
-            onChange={(e) => setForm({ ...form, grupo: e.target.value || null })} /></label>
+          <label>Plano
+            <select value={form.plano_id ?? ""}
+              onChange={(e) => setForm({
+                ...form,
+                plano_id: e.target.value ? Number(e.target.value) : null,
+                plano: e.target.value
+                  ? (planos.find((p) => p.id === Number(e.target.value))?.nome ?? null)
+                  : null,
+              })}>
+              <option value="">— sem plano —</option>
+              {planos.map((p) => (
+                <option key={p.id} value={p.id}>{p.nome}</option>
+              ))}
+            </select>
+          </label>
+          <label>Grupo
+            <select value={form.grupo_id ?? ""}
+              onChange={(e) => setForm({
+                ...form,
+                grupo_id: e.target.value ? Number(e.target.value) : null,
+                grupo: e.target.value
+                  ? (grupos.find((g) => g.id === Number(e.target.value))?.nome ?? null)
+                  : null,
+              })}>
+              <option value="">— sem grupo —</option>
+              {grupos.map((g) => (
+                <option key={g.id} value={g.id}>{g.nome}</option>
+              ))}
+            </select>
+          </label>
           <label>Status<select value={form.status ?? "ativo"}
             onChange={(e) => setForm({ ...form, status: e.target.value as "ativo" | "inativo" })}>
             <option value="ativo">Ativo</option>

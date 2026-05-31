@@ -30,8 +30,10 @@ class ClienteCreate(SQLModel):
     email: Optional[str] = None
     data_nascimento: Optional[date] = None
     data_inicio_parceria: date
-    plano: Optional[str] = None
-    grupo: Optional[str] = None
+    plano: Optional[str] = None              # legado
+    grupo: Optional[str] = None              # legado
+    plano_id: Optional[int] = None           # FK → planos_servicos
+    grupo_id: Optional[int] = None           # FK → grupos
     status: StatusCliente = StatusCliente.ativo
     observacoes: Optional[str] = None
 
@@ -44,6 +46,8 @@ class ClienteUpdate(SQLModel):
     data_inicio_parceria: Optional[date] = None
     plano: Optional[str] = None
     grupo: Optional[str] = None
+    plano_id: Optional[int] = None
+    grupo_id: Optional[int] = None
     status: Optional[StatusCliente] = None
     observacoes: Optional[str] = None
 
