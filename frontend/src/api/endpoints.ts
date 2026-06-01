@@ -4,6 +4,8 @@ import type {
   AgendaItem,
   Backup,
   FilaResponse,
+  Resposta,
+  RespostasStats,
   Cliente,
   ClienteCreate,
   ClienteUpdate,
@@ -250,3 +252,23 @@ export const enviarAgora = (id: number) =>
   api.post<{ ok: boolean; envio_id_original: number; envio_id_novo: number; status_novo: string }>(
     `/fila/${id}/enviar-agora`,
   );
+
+// =========================================================================
+// Respostas (feedback dos clientes recebido via webhook)
+// =========================================================================
+export const listRespostas = (params?: {
+  cliente_id?: number; processado?: boolean; q?: string;
+  limit?: number; offset?: number;
+}) => api.get<Resposta[]>("/respostas", params);
+
+export const respostasStats = () =>
+  api.get<RespostasStats>("/respostas/stats");
+
+export const marcarLida = (id: number) =>
+  api.post<{ ok: boolean }>(`/respostas/${id}/marcar-lida`);
+
+export const marcarNaoLida = (id: number) =>
+  api.post<{ ok: boolean }>(`/respostas/${id}/marcar-nao-lida`);
+
+export const deleteResposta = (id: number) =>
+  api.delete(`/respostas/${id}`);

@@ -217,6 +217,25 @@ export type NegocioUpdate = Partial<NegocioCreate>;
 
 export type TipoEvento = "pos_venda" | "evento";
 
+export interface Resposta {
+  id: number;
+  cliente_id: number | null;
+  cliente_nome: string | null;
+  telefone_origem: string;
+  telefone_destino: string;
+  mensagem_texto: string;
+  tipo_mensagem?: string | null;
+  mensagem_evolution_id?: string | null;
+  processado: boolean;
+  recebido_em: string;
+  criado_em: string;
+}
+
+export interface RespostasStats {
+  total: number;
+  nao_lidas: number;
+}
+
 export interface FilaItem {
   id: number;
   cliente_id: number | null;
