@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import {
   createEvento, createEventoBroadcast, deleteEvento, dispatchEvento,
   dispatchPosVenda, listClientes, listEventos, listGrupos,
-  previewBroadcast, updateEvento,
+  previewBroadcast, quickCreateGrupo, updateEvento,
 } from "../api/endpoints";
 import type {
   BroadcastPreview, Cliente, Evento, EventoCreate, Grupo, TipoEvento,
@@ -282,12 +282,29 @@ export default function EventosPage() {
             </label>
           ) : (
             <label>Grupo *
-              <select value={grupoId ?? ""}
-                onChange={(e) => setGrupoId(e.target.value ? Number(e.target.value) : null)}>
-                {grupos.map((g) => (
-                  <option key={g.id} value={g.id}>{g.nome}</option>
-                ))}
-              </select>
+              <div style={{ display: "flex", gap: 6 }}>
+                <select value={grupoId ?? ""}
+                  style={{ flex: 1 }}
+                  onChange={(e) => setGrupoId(e.target.value ? Number(e.target.value) : null)}>
+                  {grupos.length === 0 && <option value="">(sem grupos)</option>}
+                  {grupos.map((g) => (
+                    <option key={g.id} value={g.id}>{g.nome}</option>
+                  ))}
+                </select>
+                <button type="button" className="btn"
+                  title="Criar novo grupo"
+                  onClick={async () => {
+                    const nome = prompt("Nome do novo grupo:");
+                    if (!nome?.trim()) return;
+                    try {
+                      const g = await quickCreateGrupo(nome.trim());
+                      // recarrega lista e seleciona o novo
+                      const refreshed = await listGrupos(true);
+                      setGrupos(refreshed);
+                      setGrupoId(g.id);
+                    } catch (e) { setError(String(e)); }
+                  }}>+ novo</button>
+              </div>
             </label>
           )}
 

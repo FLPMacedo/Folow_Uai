@@ -77,6 +77,17 @@ class ClienteModulo(SQLModel, table=True):
 
 
 # ============================================================================
+# cliente_grupos — M:N cliente↔grupo (cliente pode estar em N grupos)
+# ============================================================================
+class ClienteGrupo(SQLModel, table=True):
+    __tablename__ = "cliente_grupos"
+
+    cliente_id: int = Field(foreign_key="clientes.id", primary_key=True)
+    grupo_id: int = Field(foreign_key="grupos.id", primary_key=True)
+    criado_em: datetime = Field(default_factory=utcnow)
+
+
+# ============================================================================
 # Link table (M:N cliente ↔ tag) — defined first so Relationship can reference
 # ============================================================================
 class ClienteTag(SQLModel, table=True):

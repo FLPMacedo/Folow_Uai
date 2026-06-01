@@ -1,8 +1,9 @@
 import { useEffect, useRef, useState } from "react";
 import {
   createCliente, deleteCliente, exportClientesXlsxUrl,
-  getClienteModulos, importClientesXlsx, listClientes, listGrupos, listPlanos,
-  setClienteModulos, updateCliente,
+  getClienteModulos, getGruposDoCliente, importClientesXlsx,
+  listClientes, listGrupos, listPlanos, setClienteModulos,
+  setGruposDoCliente, updateCliente,
 } from "../api/endpoints";
 import type {
   Cliente, ClienteCreate, ClienteModulosResponse,
@@ -36,6 +37,7 @@ export default function ClientesPage() {
   const [error, setError] = useState<string | null>(null);
   const [importResult, setImportResult] = useState<ImportResult | null>(null);
   const [modulosCliente, setModulosCliente] = useState<ClienteModulosResponse | null>(null);
+  const [gruposDoCliente, setGruposDoClienteState] = useState<Set<number>>(new Set());
   const fileRef = useRef<HTMLInputElement>(null);
 
   const load = async () => {
@@ -65,7 +67,10 @@ export default function ClientesPage() {
   };
 
   const openCreate = () => {
-    setEditing(null); setForm(empty); setModulosCliente(null); setModalOpen(true);
+    setEditing(null); setForm(empty);
+    setModulosCliente(null);
+    setGruposDoClienteState(new Set());
+    setModalOpen(true);
   };
   const openEdit = async (c: Cliente) => {
     setEditing(c);
@@ -78,9 +83,21 @@ export default function ClientesPage() {
       status: c.status, observacoes: c.observacoes ?? undefined,
     });
     setModulosCliente(null);
+    setGruposDoClienteState(new Set(c.grupo_id ? [c.grupo_id] : []));
     setModalOpen(true);
-    try { setModulosCliente(await getClienteModulos(c.id)); }
-    catch (e) { console.warn("falha ao carregar módulos:", e); }
+    try {
+      const [mods, gids] = await Promise.all([
+        getClienteModulos(c.id),
+        getGruposDoCliente(c.id),
+      ]);
+      setModulosCliente(mods);
+      setGruposDoClienteState(new Set(gids));
+    } catch (e) { console.warn("falha ao carregar dados extra:", e); }
+  };
+  const toggleGrupo = (gid: number) => {
+    const novo = new Set(gruposDoCliente);
+    if (novo.has(gid)) novo.delete(gid); else novo.add(gid);
+    setGruposDoClienteState(novo);
   };
   const toggleModulo = (mod: string) => {
     if (!modulosCliente) return;
@@ -108,6 +125,8 @@ export default function ClientesPage() {
         const created = await createCliente(form);
         savedId = created.id;
       }
+      // persiste grupos M:N
+      await setGruposDoCliente(savedId, Array.from(gruposDoCliente));
       // persiste módulos se foi modificado
       if (modulosCliente && modulosCliente.explicito) {
         const moduloFlags: Record<string, boolean> = {};
@@ -284,21 +303,41 @@ export default function ClientesPage() {
               ))}
             </select>
           </label>
-          <label>Grupo
-            <select value={form.grupo_id ?? ""}
-              onChange={(e) => setForm({
-                ...form,
-                grupo_id: e.target.value ? Number(e.target.value) : null,
-                grupo: e.target.value
-                  ? (grupos.find((g) => g.id === Number(e.target.value))?.nome ?? null)
-                  : null,
-              })}>
-              <option value="">— sem grupo —</option>
-              {grupos.map((g) => (
-                <option key={g.id} value={g.id}>{g.nome}</option>
-              ))}
-            </select>
-          </label>
+          <div>
+            <div style={{ fontSize: 12, color: "#6b7280", marginBottom: 4 }}>
+              Grupos ({gruposDoCliente.size})
+            </div>
+            {grupos.length === 0 ? (
+              <div className="muted" style={{ fontSize: 11, padding: "8px 0" }}>
+                Nenhum grupo cadastrado. Vá em Meu Negócio → Grupos.
+              </div>
+            ) : (
+              <div style={{
+                border: "1px solid #d1d5db", borderRadius: 6,
+                padding: 6, maxHeight: 120, overflowY: "auto",
+                background: "#fff",
+              }}>
+                {grupos.map((g) => (
+                  <label key={g.id} style={{
+                    display: "flex", flexDirection: "row",
+                    alignItems: "center", gap: 6, padding: "3px 4px",
+                    cursor: "pointer", fontSize: 13,
+                  }}>
+                    <input type="checkbox"
+                      checked={gruposDoCliente.has(g.id)}
+                      onChange={() => toggleGrupo(g.id)} />
+                    {g.cor && (
+                      <span style={{
+                        width: 10, height: 10, borderRadius: 2,
+                        background: g.cor, display: "inline-block",
+                      }} />
+                    )}
+                    <span>{g.nome}</span>
+                  </label>
+                ))}
+              </div>
+            )}
+          </div>
           <label>Status<select value={form.status ?? "ativo"}
             onChange={(e) => setForm({ ...form, status: e.target.value as "ativo" | "inativo" })}>
             <option value="ativo">Ativo</option>

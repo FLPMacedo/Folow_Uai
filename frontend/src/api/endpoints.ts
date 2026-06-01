@@ -61,6 +61,12 @@ export const updateCliente = (id: number, payload: ClienteUpdate) =>
 export const deleteCliente = (id: number, force = false) =>
   api.delete(`/clientes/${id}${force ? "?force=true" : ""}`);
 
+export const getGruposDoCliente = (clienteId: number) =>
+  api.get<number[]>(`/clientes/${clienteId}/grupos`);
+
+export const setGruposDoCliente = (clienteId: number, grupoIds: number[]) =>
+  api.put<number[]>(`/clientes/${clienteId}/grupos`, { grupo_ids: grupoIds });
+
 export async function importClientesXlsx(file: File): Promise<ImportResult> {
   const form = new FormData();
   form.append("file", file);
@@ -224,6 +230,11 @@ export const listGrupos = (ativo?: boolean) =>
 
 export const createGrupo = (payload: GrupoCreate) =>
   api.post<Grupo>("/grupos", payload);
+
+/* re-export pra criar grupo inline (botão "+ novo" em outros modals) */
+export const quickCreateGrupo = async (nome: string): Promise<Grupo> => {
+  return await createGrupo({ nome, cor: "#3b82f6", ativo: true });
+};
 
 export const updateGrupo = (id: number, payload: GrupoUpdate) =>
   api.put<Grupo>(`/grupos/${id}`, payload);

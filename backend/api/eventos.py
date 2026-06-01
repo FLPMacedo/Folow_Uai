@@ -8,7 +8,7 @@ from sqlmodel import Session, select
 
 from backend.api.deps import get_session
 from backend.api.schemas import EventoBroadcastCreate, EventoCreate, EventoUpdate
-from backend.models import Cliente, Evento, StatusCliente, TipoEvento
+from backend.models import Cliente, ClienteGrupo, Evento, StatusCliente, TipoEvento
 
 
 router = APIRouter(prefix="/eventos", tags=["eventos"])
@@ -29,17 +29,42 @@ def create_evento(
     return ev
 
 
+def _clientes_do_grupo(session: Session, grupo_id: int) -> list[Cliente]:
+    """Lista clientes ativos no grupo via M:N OU via legado grupo_id.
+
+    Política: linhas em cliente_grupos têm prioridade. Se um cliente NÃO
+    tem nenhuma linha em cliente_grupos mas tem grupo_id == grupo_id,
+    também entra (compat com cadastros antigos do dropdown single).
+    """
+    # via M:N
+    via_mn = session.exec(
+        select(Cliente).join(
+            ClienteGrupo, ClienteGrupo.cliente_id == Cliente.id,
+        ).where(
+            ClienteGrupo.grupo_id == grupo_id,
+            Cliente.status == StatusCliente.ativo,
+        )
+    ).all()
+    ids_mn = {c.id for c in via_mn}
+    # legado: clientes que TÊM grupo_id == este E não estão em cliente_grupos
+    legados = session.exec(
+        select(Cliente).where(
+            Cliente.grupo_id == grupo_id,
+            Cliente.status == StatusCliente.ativo,
+            Cliente.id.notin_(  # type: ignore[union-attr]
+                select(ClienteGrupo.cliente_id)
+            ),
+        )
+    ).all()
+    return list(via_mn) + [c for c in legados if c.id not in ids_mn]
+
+
 @router.get("/preview-broadcast/{grupo_id}")
 def preview_broadcast(
     grupo_id: int, session: Session = Depends(get_session),
 ) -> dict:
     """Quantos clientes ATIVOS serão alvo se o evento for criado pra esse grupo."""
-    clientes = session.exec(
-        select(Cliente).where(
-            Cliente.grupo_id == grupo_id,
-            Cliente.status == StatusCliente.ativo,
-        )
-    ).all()
+    clientes = _clientes_do_grupo(session, grupo_id)
     return {
         "grupo_id": grupo_id,
         "total_clientes_ativos": len(clientes),
@@ -57,12 +82,7 @@ def create_evento_broadcast(
     Útil pra ações em massa: "festa pra todo grupo VIP" → cria N eventos
     em uma transação, cada um vinculado a 1 cliente real.
     """
-    clientes = session.exec(
-        select(Cliente).where(
-            Cliente.grupo_id == payload.grupo_id,
-            Cliente.status == StatusCliente.ativo,
-        )
-    ).all()
+    clientes = _clientes_do_grupo(session, payload.grupo_id)
     if not clientes:
         raise HTTPException(
             400,

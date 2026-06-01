@@ -385,3 +385,20 @@ CREATE TABLE IF NOT EXISTS cliente_modulos (
 );
 
 CREATE INDEX IF NOT EXISTS idx_cliente_modulos_modulo ON cliente_modulos(modulo, ativo);
+
+-- ============================================================================
+-- cliente_grupos — M:N cliente↔grupo (1 cliente pode estar em N grupos)
+-- Compat: clientes.grupo_id continua como "grupo primário" legado.
+-- Política: se cliente tem >=1 entry aqui, considera essas como TRUTH.
+-- Senão, cai no grupo_id legado.
+-- ============================================================================
+CREATE TABLE IF NOT EXISTS cliente_grupos (
+    cliente_id INTEGER NOT NULL,
+    grupo_id INTEGER NOT NULL,
+    criado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (cliente_id, grupo_id),
+    FOREIGN KEY (cliente_id) REFERENCES clientes(id) ON DELETE CASCADE,
+    FOREIGN KEY (grupo_id) REFERENCES grupos(id) ON DELETE CASCADE
+);
+
+CREATE INDEX IF NOT EXISTS idx_cliente_grupos_grupo ON cliente_grupos(grupo_id);

@@ -156,6 +156,66 @@ def update_cliente(
     return cliente
 
 
+# ----------------------------------------------------------------------------
+# Grupos do cliente (M:N — cliente pode estar em N grupos)
+# ----------------------------------------------------------------------------
+@router.get("/{cliente_id}/grupos", response_model=list[int])
+def get_grupos_do_cliente(
+    cliente_id: int, session: Session = Depends(get_session),
+) -> list[int]:
+    """Lista IDs dos grupos do cliente.
+
+    Se cliente não tem entries em cliente_grupos mas tem grupo_id legado,
+    retorna [grupo_id] (fallback transparente).
+    """
+    from backend.models import ClienteGrupo
+    cliente = session.get(Cliente, cliente_id)
+    if not cliente:
+        raise HTTPException(404, "Cliente não encontrado")
+    rows = session.exec(
+        select(ClienteGrupo).where(ClienteGrupo.cliente_id == cliente_id)
+    ).all()
+    if rows:
+        return [r.grupo_id for r in rows]
+    if cliente.grupo_id:  # fallback legado
+        return [cliente.grupo_id]
+    return []
+
+
+@router.put("/{cliente_id}/grupos", response_model=list[int])
+def set_grupos_do_cliente(
+    cliente_id: int,
+    payload: dict,  # { "grupo_ids": [1, 2, 3] }
+    session: Session = Depends(get_session),
+) -> list[int]:
+    """Substitui a lista de grupos do cliente. Mantém grupo_id (primeiro) por compat."""
+    from backend.models import ClienteGrupo
+    cliente = session.get(Cliente, cliente_id)
+    if not cliente:
+        raise HTTPException(404, "Cliente não encontrado")
+    grupo_ids = payload.get("grupo_ids") or []
+    if not isinstance(grupo_ids, list):
+        raise HTTPException(400, "grupo_ids deve ser list[int]")
+
+    # apaga vínculos antigos
+    existentes = session.exec(
+        select(ClienteGrupo).where(ClienteGrupo.cliente_id == cliente_id)
+    ).all()
+    for e in existentes:
+        session.delete(e)
+    # adiciona novos
+    novos: list[int] = []
+    for gid in grupo_ids:
+        gid_int = int(gid)
+        session.add(ClienteGrupo(cliente_id=cliente_id, grupo_id=gid_int))
+        novos.append(gid_int)
+    # compat: grupo_id = primeiro grupo (ou None)
+    cliente.grupo_id = novos[0] if novos else None
+    session.add(cliente)
+    session.commit()
+    return novos
+
+
 @router.delete("/{cliente_id}", status_code=204, response_class=Response)
 def delete_cliente(
     cliente_id: int,
