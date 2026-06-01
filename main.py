@@ -11,15 +11,49 @@ Ctrl+C derruba tudo (uvicorn + Electron).
 """
 from __future__ import annotations
 
-import argparse
 import os
+import subprocess
+import sys
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parent
+
+
+# ============================================================================
+# Re-exec no venv — DEVE ser o PRIMEIRO bloco, antes de importar uvicorn etc.
+# ============================================================================
+def _ensure_venv() -> None:
+    """Se ainda não estamos no venv, re-exec com .venv/Scripts/python.exe."""
+    if os.environ.get("FOLLOWUAI_VENV_ACTIVE") == "1":
+        return  # já reexecutado neste run
+    venv_py = ROOT / (
+        ".venv/Scripts/python.exe" if os.name == "nt" else ".venv/bin/python"
+    )
+    if not venv_py.exists():
+        return  # sem venv — deixa cair no erro claro mais adiante
+    try:
+        if Path(sys.executable).resolve() == venv_py.resolve():
+            return  # já é o venv python
+    except OSError:
+        pass
+    print(f"[..] Re-executando no venv: {venv_py}", flush=True)
+    env = os.environ.copy()
+    env["FOLLOWUAI_VENV_ACTIVE"] = "1"
+    result = subprocess.run([str(venv_py), *sys.argv], env=env, cwd=str(ROOT))
+    sys.exit(result.returncode)
+
+
+_ensure_venv()  # noqa: E402
+
+
+# ============================================================================
+# Imports após garantir venv
+# ============================================================================
+import argparse
 import shutil
 import signal
 import socket
-import subprocess
-import sys
 import time
-from pathlib import Path
 
 try:
     sys.stdout.reconfigure(encoding="utf-8")
@@ -27,7 +61,6 @@ try:
 except Exception:
     pass
 
-ROOT         = Path(__file__).resolve().parent
 DOCKER_DIR   = ROOT / "docker"
 FRONTEND_DIR = ROOT / "frontend"
 
