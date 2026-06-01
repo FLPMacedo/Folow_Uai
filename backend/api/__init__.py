@@ -6,6 +6,7 @@ from backend.api.clientes import router as clientes_router
 from backend.api.envios import router as envios_router
 from backend.api.eventos import router as eventos_router
 from backend.api.fila import router as fila_router
+from backend.api.modulos import router as modulos_router
 from backend.api.negocios import router as negocios_router
 from backend.api.respostas import router as respostas_router
 from backend.api.telefones import router as telefones_router
@@ -24,6 +25,7 @@ all_routers = [
     agenda_router,
     fila_router,
     respostas_router,
+    modulos_router,
     webhook_router,
     admin_router,
 ]

@@ -1,14 +1,23 @@
 import { useEffect, useRef, useState } from "react";
 import {
   createCliente, deleteCliente, exportClientesXlsxUrl,
-  importClientesXlsx, listClientes, listGrupos, listPlanos,
-  updateCliente,
+  getClienteModulos, importClientesXlsx, listClientes, listGrupos, listPlanos,
+  setClienteModulos, updateCliente,
 } from "../api/endpoints";
 import type {
-  Cliente, ClienteCreate, Grupo, ImportResult, PlanoServico,
+  Cliente, ClienteCreate, ClienteModulosResponse,
+  Grupo, ImportResult, PlanoServico,
 } from "../api/types";
 import Modal from "../components/Modal";
 import ErrorBanner from "../components/ErrorBanner";
+
+const MODULOS_LABELS: Array<[string, string]> = [
+  ["comemorativo", "Aniversário e marcos de parceria"],
+  ["expiracao",    "Alertas de expiração de plano"],
+  ["pos_venda",    "Pós-venda (após compra)"],
+  ["evento",       "Eventos (véspera e pós)"],
+  ["sumiu",        "Reativação 'Sumiu por quê?'"],
+];
 
 const empty: ClienteCreate = {
   nome: "", telefone: "",
@@ -26,6 +35,7 @@ export default function ClientesPage() {
   const [form, setForm] = useState<ClienteCreate>(empty);
   const [error, setError] = useState<string | null>(null);
   const [importResult, setImportResult] = useState<ImportResult | null>(null);
+  const [modulosCliente, setModulosCliente] = useState<ClienteModulosResponse | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
 
   const load = async () => {
@@ -55,9 +65,9 @@ export default function ClientesPage() {
   };
 
   const openCreate = () => {
-    setEditing(null); setForm(empty); setModalOpen(true);
+    setEditing(null); setForm(empty); setModulosCliente(null); setModalOpen(true);
   };
-  const openEdit = (c: Cliente) => {
+  const openEdit = async (c: Cliente) => {
     setEditing(c);
     setForm({
       nome: c.nome, telefone: c.telefone, email: c.email ?? undefined,
@@ -67,13 +77,45 @@ export default function ClientesPage() {
       plano_id: c.plano_id ?? null, grupo_id: c.grupo_id ?? null,
       status: c.status, observacoes: c.observacoes ?? undefined,
     });
+    setModulosCliente(null);
     setModalOpen(true);
+    try { setModulosCliente(await getClienteModulos(c.id)); }
+    catch (e) { console.warn("falha ao carregar módulos:", e); }
+  };
+  const toggleModulo = (mod: string) => {
+    if (!modulosCliente) return;
+    setModulosCliente({
+      ...modulosCliente,
+      explicito: true,
+      modulos: {
+        ...modulosCliente.modulos,
+        [mod]: {
+          ...modulosCliente.modulos[mod],
+          ativo: !modulosCliente.modulos[mod]?.ativo,
+          legado: false,
+        },
+      },
+    });
   };
 
   const save = async () => {
     try {
-      if (editing) await updateCliente(editing.id, form);
-      else await createCliente(form);
+      let savedId: number;
+      if (editing) {
+        await updateCliente(editing.id, form);
+        savedId = editing.id;
+      } else {
+        const created = await createCliente(form);
+        savedId = created.id;
+      }
+      // persiste módulos se foi modificado
+      if (modulosCliente && modulosCliente.explicito) {
+        const moduloFlags: Record<string, boolean> = {};
+        for (const [k, v] of Object.entries(modulosCliente.modulos)) {
+          moduloFlags[k] = v.ativo;
+        }
+        await setClienteModulos(savedId, moduloFlags);
+      }
       setModalOpen(false); setError(null); await load();
     } catch (e) { setError(String(e)); }
   };
@@ -264,6 +306,42 @@ export default function ClientesPage() {
           </select></label>
           <label className="span2">Observações<textarea value={form.observacoes ?? ""}
             onChange={(e) => setForm({ ...form, observacoes: e.target.value || null })} /></label>
+
+          {editing && (
+            <div className="span2" style={{
+              borderTop: "1px solid #e5e7eb", paddingTop: 12, marginTop: 4,
+            }}>
+              <strong>Módulos ativos para este cliente</strong>
+              {modulosCliente === null ? (
+                <div className="muted" style={{ fontSize: 11, marginTop: 6 }}>
+                  Carregando…
+                </div>
+              ) : (
+                <>
+                  <div className="muted" style={{ fontSize: 11, marginTop: 2,
+                    marginBottom: 8 }}>
+                    {modulosCliente.explicito
+                      ? "Configurado explicitamente."
+                      : "Legado: cliente recebe TODOS os módulos. Desmarcando algum vira explícito."}
+                  </div>
+                  {MODULOS_LABELS.map(([mod, label]) => {
+                    const info = modulosCliente.modulos[mod];
+                    return (
+                      <label key={mod} style={{
+                        display: "flex", flexDirection: "row",
+                        alignItems: "center", gap: 8, padding: "4px 0",
+                      }}>
+                        <input type="checkbox" checked={info?.ativo ?? false}
+                          onChange={() => toggleModulo(mod)} />
+                        <span>{label}</span>
+                        {info?.legado && <span className="badge muted">legado</span>}
+                      </label>
+                    );
+                  })}
+                </>
+              )}
+            </div>
+          )}
         </div>
       </Modal>
     </div>

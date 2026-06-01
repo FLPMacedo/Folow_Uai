@@ -367,3 +367,21 @@ CREATE TABLE IF NOT EXISTS grupos (
 );
 
 CREATE INDEX IF NOT EXISTS idx_grupos_ativo ON grupos(ativo);
+
+-- ============================================================================
+-- cliente_modulos — opt-in M:N (cliente, modulo)
+-- Comportamento legado: cliente SEM nenhuma entry = participa de todos
+-- (clientes pré-migração não perdem dispatchs). Quando user cria a 1ª
+-- entry para esse cliente, vira "explícito" e só os módulos ativos disparam.
+-- ============================================================================
+CREATE TABLE IF NOT EXISTS cliente_modulos (
+    cliente_id INTEGER NOT NULL,
+    modulo TEXT NOT NULL,
+    ativo BOOLEAN DEFAULT 1,
+    opt_in_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    observacao TEXT,
+    PRIMARY KEY (cliente_id, modulo),
+    FOREIGN KEY (cliente_id) REFERENCES clientes(id) ON DELETE CASCADE
+);
+
+CREATE INDEX IF NOT EXISTS idx_cliente_modulos_modulo ON cliente_modulos(modulo, ativo);

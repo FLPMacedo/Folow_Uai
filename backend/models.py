@@ -64,6 +64,19 @@ class TipoComemorativo(str, Enum):
 
 
 # ============================================================================
+# cliente_modulos — opt-in M:N cliente↔módulo
+# ============================================================================
+class ClienteModulo(SQLModel, table=True):
+    __tablename__ = "cliente_modulos"
+
+    cliente_id: int = Field(foreign_key="clientes.id", primary_key=True)
+    modulo: str = Field(primary_key=True)  # Enum Modulo armazenado como texto
+    ativo: bool = True
+    opt_in_em: datetime = Field(default_factory=utcnow)
+    observacao: Optional[str] = None
+
+
+# ============================================================================
 # Link table (M:N cliente ↔ tag) — defined first so Relationship can reference
 # ============================================================================
 class ClienteTag(SQLModel, table=True):

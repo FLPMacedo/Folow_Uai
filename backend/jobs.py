@@ -17,6 +17,7 @@ from sqlmodel import Session, select
 
 from backend.models import (
     Cliente,
+    ClienteModulo,
     Comemorativo,
     Envio,
     Evento,
@@ -31,6 +32,23 @@ from backend.models import (
 )
 from backend.sender import Sender
 from backend.templates import derive_cliente_vars, render
+
+
+def _cliente_tem_opt_in(
+    session: Session, cliente_id: int, modulo: Modulo,
+) -> bool:
+    """True se cliente pode receber esse módulo.
+
+    Política legacy-friendly:
+      - Se cliente tem >=1 entry em cliente_modulos: só aceita módulos com ativo=True
+      - Se cliente NÃO tem nenhuma entry: aceita todos (legado pré-migração)
+    """
+    entries = session.exec(
+        select(ClienteModulo).where(ClienteModulo.cliente_id == cliente_id)
+    ).all()
+    if not entries:
+        return True  # legado: nenhuma opt-in explícita = aceita tudo
+    return any(e.modulo == modulo.value and e.ativo for e in entries)
 
 
 def _default_negocio(session: Session) -> Optional[Negocio]:
@@ -94,6 +112,9 @@ def dispatch_comemorativo(
     ).all()
 
     for c in clientes:
+        if not _cliente_tem_opt_in(session, c.id, Modulo.comemorativo):
+            stats["ignorados"] += 1
+            continue
         # ----- aniversário -----
         if c.data_nascimento and (
             c.data_nascimento.month == today.month
@@ -219,6 +240,9 @@ def dispatch_expiracao(
         if not cliente or cliente.status != StatusCliente.ativo:
             stats["ignorados"] += 1
             continue
+        if not _cliente_tem_opt_in(session, cliente.id, Modulo.expiracao):
+            stats["ignorados"] += 1
+            continue
 
         vars_ = derive_cliente_vars(cliente, today=today, negocio=negocio, extras={
             "dias_restantes": dias_rest,
@@ -303,6 +327,9 @@ def dispatch_pos_venda(
         if not cliente or cliente.status != StatusCliente.ativo:
             stats["ignorados"] += 1
             continue
+        if not _cliente_tem_opt_in(session, cliente.id, Modulo.pos_venda):
+            stats["ignorados"] += 1
+            continue
 
         for etapa_dias, tipo_gatilho, fallback in POS_VENDA_ETAPAS:
             if dias != etapa_dias:
@@ -364,6 +391,9 @@ def dispatch_evento(
     for ev in evs:
         cliente = session.get(Cliente, ev.cliente_id)
         if not cliente or cliente.status != StatusCliente.ativo:
+            stats["ignorados"] += 1
+            continue
+        if not _cliente_tem_opt_in(session, cliente.id, Modulo.evento):
             stats["ignorados"] += 1
             continue
 

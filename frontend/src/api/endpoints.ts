@@ -3,6 +3,7 @@ import { api, API_BASE } from "./client";
 import type {
   AgendaItem,
   Backup,
+  ClienteModulosResponse,
   FilaResponse,
   Resposta,
   RespostasStats,
@@ -272,3 +273,14 @@ export const marcarNaoLida = (id: number) =>
 
 export const deleteResposta = (id: number) =>
   api.delete(`/respostas/${id}`);
+
+// =========================================================================
+// Opt-in cliente↔módulo
+// =========================================================================
+export const getClienteModulos = (clienteId: number) =>
+  api.get<ClienteModulosResponse>(`/modulos/cliente/${clienteId}`);
+
+export const setClienteModulos = (
+  clienteId: number, modulos: Record<string, boolean>,
+) =>
+  api.put<ClienteModulosResponse>(`/modulos/cliente/${clienteId}`, { modulos });

@@ -217,6 +217,16 @@ export type NegocioUpdate = Partial<NegocioCreate>;
 
 export type TipoEvento = "pos_venda" | "evento";
 
+export interface ClienteModulosResponse {
+  explicito: boolean;
+  modulos: Record<string, {
+    ativo: boolean;
+    opt_in_em?: string | null;
+    observacao?: string | null;
+    legado?: boolean;
+  }>;
+}
+
 export interface Resposta {
   id: number;
   cliente_id: number | null;
