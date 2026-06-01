@@ -179,6 +179,16 @@ class EventoUpdate(SQLModel):
     pos_mensagem_enviada: Optional[bool] = None
 
 
+class EventoBroadcastCreate(SQLModel):
+    """Cria 1 Evento por cliente ativo de um grupo específico."""
+    grupo_id: int
+    nome_evento: str
+    tipo_evento: TipoEvento
+    data_evento: date
+    data_compra: Optional[date] = None
+    observacoes: Optional[str] = None
+
+
 class TemplateUpdate(SQLModel):
     nome: Optional[str] = None
     modulo: Optional[Modulo] = None
@@ -216,7 +226,7 @@ __all__ = [
     "ClienteCreate", "ClienteUpdate",
     "TelefoneCreate", "TelefoneUpdate",
     "TemplateCreate", "TemplateUpdate",
-    "EventoCreate", "EventoUpdate",
+    "EventoCreate", "EventoUpdate", "EventoBroadcastCreate",
     "NegocioCreate", "NegocioUpdate",
     "PlanoServicoCreate", "PlanoServicoUpdate",
     "GrupoCreate", "GrupoUpdate",

@@ -305,3 +305,24 @@ export type EventoUpdate = Partial<Omit<EventoCreate, "cliente_id">> & {
   vespera_mensagem_enviada?: boolean;
   pos_mensagem_enviada?: boolean;
 };
+
+export interface EventoBroadcastCreate {
+  grupo_id: number;
+  nome_evento: string;
+  tipo_evento: TipoEvento;
+  data_evento: string;
+  data_compra?: string | null;
+  observacoes?: string | null;
+}
+
+export interface BroadcastPreview {
+  grupo_id: number;
+  total_clientes_ativos: number;
+  amostra_nomes: string[];
+}
+
+export interface BroadcastResult {
+  criados: number;
+  grupo_id: number;
+  evento_ids: number[];
+}

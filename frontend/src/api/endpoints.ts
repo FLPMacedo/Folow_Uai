@@ -3,7 +3,10 @@ import { api, API_BASE } from "./client";
 import type {
   AgendaItem,
   Backup,
+  BroadcastPreview,
+  BroadcastResult,
   ClienteModulosResponse,
+  EventoBroadcastCreate,
   FilaResponse,
   Resposta,
   RespostasStats,
@@ -169,6 +172,12 @@ export const updateEvento = (id: number, payload: EventoUpdate) =>
 
 export const deleteEvento = (id: number) =>
   api.delete(`/eventos/${id}`);
+
+export const previewBroadcast = (grupoId: number) =>
+  api.get<BroadcastPreview>(`/eventos/preview-broadcast/${grupoId}`);
+
+export const createEventoBroadcast = (payload: EventoBroadcastCreate) =>
+  api.post<BroadcastResult>("/eventos/broadcast", payload);
 
 // =========================================================================
 // Negócios (meu negócio / multi-empresa)

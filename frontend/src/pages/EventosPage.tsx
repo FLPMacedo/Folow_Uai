@@ -1,11 +1,16 @@
 import { useEffect, useState } from "react";
 import {
-  createEvento, deleteEvento, dispatchEvento, dispatchPosVenda,
-  listClientes, listEventos, updateEvento,
+  createEvento, createEventoBroadcast, deleteEvento, dispatchEvento,
+  dispatchPosVenda, listClientes, listEventos, listGrupos,
+  previewBroadcast, updateEvento,
 } from "../api/endpoints";
-import type { Cliente, Evento, EventoCreate, TipoEvento } from "../api/types";
+import type {
+  BroadcastPreview, Cliente, Evento, EventoCreate, Grupo, TipoEvento,
+} from "../api/types";
 import Modal from "../components/Modal";
 import ErrorBanner from "../components/ErrorBanner";
+
+type Destino = "cliente" | "grupo";
 
 const empty: EventoCreate = {
   cliente_id: 0,
@@ -18,29 +23,45 @@ const empty: EventoCreate = {
 export default function EventosPage() {
   const [eventos, setEventos] = useState<Evento[]>([]);
   const [clientes, setClientes] = useState<Cliente[]>([]);
+  const [grupos, setGrupos] = useState<Grupo[]>([]);
   const [filterTipo, setFilterTipo] = useState<TipoEvento | "">("");
   const [filterCliente, setFilterCliente] = useState<number | "">("");
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<Evento | null>(null);
   const [form, setForm] = useState<EventoCreate>(empty);
+  const [destino, setDestino] = useState<Destino>("cliente");
+  const [grupoId, setGrupoId] = useState<number | null>(null);
+  const [preview, setPreview] = useState<BroadcastPreview | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [lastStats, setLastStats] = useState<{ which: string; stats: { enviados: number; falhas: number; pendentes: number; ignorados: number } } | null>(null);
 
   const load = async () => {
     try {
-      const [evs, cs] = await Promise.all([
+      const [evs, cs, gs] = await Promise.all([
         listEventos({
           tipo_evento: filterTipo || undefined,
           cliente_id: typeof filterCliente === "number" ? filterCliente : undefined,
         }),
         listClientes({ limit: 1000 }),
+        listGrupos(true),
       ]);
       setEventos(evs);
       setClientes(cs);
+      setGrupos(gs);
     } catch (e) { setError(String(e)); }
   };
   useEffect(() => { void load(); /* eslint-disable-next-line */ }, [filterTipo, filterCliente]);
+
+  // Atualiza preview quando muda grupo
+  useEffect(() => {
+    if (destino !== "grupo" || !grupoId) { setPreview(null); return; }
+    let canceled = false;
+    void previewBroadcast(grupoId).then((p) => {
+      if (!canceled) setPreview(p);
+    }).catch(() => setPreview(null));
+    return () => { canceled = true; };
+  }, [destino, grupoId]);
 
   const openCreate = (tipo: TipoEvento) => {
     setEditing(null);
@@ -50,6 +71,9 @@ export default function EventosPage() {
       cliente_id: clientes[0]?.id ?? 0,
       data_compra: tipo === "pos_venda" ? new Date().toISOString().slice(0, 10) : null,
     });
+    setDestino("cliente");
+    setGrupoId(grupos[0]?.id ?? null);
+    setPreview(null);
     setModalOpen(true);
   };
   const openEdit = (ev: Evento) => {
@@ -62,12 +86,34 @@ export default function EventosPage() {
       data_compra: ev.data_compra ?? null,
       observacoes: ev.observacoes ?? null,
     });
+    setDestino("cliente");  // editar é sempre 1 evento
     setModalOpen(true);
   };
   const save = async () => {
     try {
-      if (editing) await updateEvento(editing.id, form);
-      else await createEvento(form);
+      if (editing) {
+        await updateEvento(editing.id, form);
+      } else if (destino === "grupo") {
+        if (!grupoId) throw new Error("Escolha um grupo");
+        if (preview?.total_clientes_ativos === 0)
+          throw new Error("Grupo sem clientes ativos");
+        const ok = confirm(
+          `Criar ${preview?.total_clientes_ativos ?? "?"} eventos ` +
+          `(um por cliente do grupo)?`,
+        );
+        if (!ok) return;
+        const r = await createEventoBroadcast({
+          grupo_id: grupoId,
+          nome_evento: form.nome_evento,
+          tipo_evento: form.tipo_evento,
+          data_evento: form.data_evento,
+          data_compra: form.data_compra ?? null,
+          observacoes: form.observacoes ?? null,
+        });
+        alert(`${r.criados} eventos criados.`);
+      } else {
+        await createEvento(form);
+      }
       setModalOpen(false); setError(null); await load();
     } catch (e) { setError(String(e)); }
   };
@@ -199,14 +245,52 @@ export default function EventosPage() {
           </>
         }>
         <div className="form-grid">
-          <label>Cliente *
-            <select value={form.cliente_id}
-              onChange={(e) => setForm({ ...form, cliente_id: Number(e.target.value) })}>
-              {clientes.map((c) => (
-                <option key={c.id} value={c.id}>{c.nome} ({c.telefone})</option>
-              ))}
-            </select>
-          </label>
+          {!editing && (
+            <div className="span2" style={{
+              display: "flex", gap: 12, padding: 8,
+              background: "#f9fafb", borderRadius: 6,
+            }}>
+              <label style={{ display: "flex", flexDirection: "row",
+                alignItems: "center", gap: 6, cursor: "pointer" }}>
+                <input type="radio" checked={destino === "cliente"}
+                  onChange={() => setDestino("cliente")} />
+                <span>1 cliente</span>
+              </label>
+              <label style={{ display: "flex", flexDirection: "row",
+                alignItems: "center", gap: 6, cursor: "pointer" }}>
+                <input type="radio" checked={destino === "grupo"}
+                  onChange={() => setDestino("grupo")}
+                  disabled={grupos.length === 0} />
+                <span>Grupo inteiro (broadcast)</span>
+                {grupos.length === 0 && (
+                  <span className="muted" style={{ fontSize: 11 }}>
+                    (cadastre grupos primeiro)
+                  </span>
+                )}
+              </label>
+            </div>
+          )}
+
+          {destino === "cliente" ? (
+            <label>Cliente *
+              <select value={form.cliente_id}
+                onChange={(e) => setForm({ ...form, cliente_id: Number(e.target.value) })}>
+                {clientes.map((c) => (
+                  <option key={c.id} value={c.id}>{c.nome} ({c.telefone})</option>
+                ))}
+              </select>
+            </label>
+          ) : (
+            <label>Grupo *
+              <select value={grupoId ?? ""}
+                onChange={(e) => setGrupoId(e.target.value ? Number(e.target.value) : null)}>
+                {grupos.map((g) => (
+                  <option key={g.id} value={g.id}>{g.nome}</option>
+                ))}
+              </select>
+            </label>
+          )}
+
           <label>Tipo *
             <select value={form.tipo_evento}
               onChange={(e) => setForm({ ...form, tipo_evento: e.target.value as TipoEvento })}>
@@ -214,6 +298,25 @@ export default function EventosPage() {
               <option value="evento">Evento agendado</option>
             </select>
           </label>
+
+          {destino === "grupo" && preview && (
+            <div className="span2" style={{
+              padding: 8, background: preview.total_clientes_ativos > 0 ? "#dcfce7" : "#fee2e2",
+              borderRadius: 6, fontSize: 13,
+            }}>
+              <strong>{preview.total_clientes_ativos}</strong> clientes ativos
+              {preview.total_clientes_ativos > 0 && (
+                <span className="muted">
+                  {" · "}
+                  ex: {preview.amostra_nomes.slice(0, 5).join(", ")}
+                  {preview.amostra_nomes.length > 5 && "…"}
+                </span>
+              )}
+              {preview.total_clientes_ativos === 0 && (
+                <span className="muted"> — cadastre clientes nesse grupo primeiro.</span>
+              )}
+            </div>
+          )}
           <label className="span2">Nome *
             <input value={form.nome_evento} placeholder={
               form.tipo_evento === "pos_venda" ? "Ex: Tênis Nike, Curso X" : "Ex: Corrida 5K"
