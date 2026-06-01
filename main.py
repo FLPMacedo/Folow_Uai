@@ -189,9 +189,12 @@ def main() -> int:
         description="FollowUai — entrypoint local",
         formatter_class=argparse.ArgumentDefaultsHelpFormatter,
     )
-    ap.add_argument("--no-docker",   action="store_true", help="não sobe Evolution/Postgres/Redis")
-    ap.add_argument("--frontend",    action="store_true", help="lança painel Electron também")
-    ap.add_argument("--no-frontend", action="store_true", help="(default) só backend, sem painel")
+    ap.add_argument("--no-docker",   action="store_true",
+                    help="não sobe Evolution/Postgres/Redis")
+    ap.add_argument("--no-frontend", action="store_true",
+                    help="só backend (sem painel) — default liga Electron se instalado")
+    ap.add_argument("--frontend",    action="store_true",
+                    help="(legado, mantido por compat) — frontend já é default")
     ap.add_argument("--host", default="127.0.0.1")
     ap.add_argument("--port", type=int, default=8000)
     args = ap.parse_args()
@@ -210,9 +213,9 @@ def main() -> int:
     else:
         warn("Docker pulado (--no-docker) — Evolution precisa estar de pé manualmente")
 
-    # 2. Painel Electron (opt-in)
+    # 2. Painel Electron — default ON, desliga com --no-frontend
     electron_proc: subprocess.Popen | None = None
-    if args.frontend and not args.no_frontend:
+    if not args.no_frontend:
         electron_proc = launch_electron()
 
     # 3. Backend foreground
