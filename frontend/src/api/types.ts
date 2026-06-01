@@ -217,6 +217,28 @@ export type NegocioUpdate = Partial<NegocioCreate>;
 
 export type TipoEvento = "pos_venda" | "evento";
 
+export interface FilaItem {
+  id: number;
+  cliente_id: number | null;
+  cliente_nome: string | null;
+  telefone_whatsapp_id: number | null;
+  telefone_destino: string;
+  modulo: string;
+  mensagem_texto: string;
+  imagem_path?: string | null;
+  status: StatusEnvio;
+  erro?: string | null;
+  enviado_em?: string | null;
+  criado_em: string;
+}
+
+export interface FilaResponse {
+  pendentes: FilaItem[];
+  falhas: FilaItem[];
+  bloqueados: FilaItem[];
+  total: number;
+}
+
 export interface AgendaItem {
   data: string;                  // YYYY-MM-DD
   modulo: string;

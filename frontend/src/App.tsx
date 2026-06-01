@@ -5,12 +5,14 @@ import TemplatesPage from "./pages/TemplatesPage";
 import EventosPage from "./pages/EventosPage";
 import MeuNegocioPage from "./pages/MeuNegocioPage";
 import AgendaPage from "./pages/AgendaPage";
+import FilaPage from "./pages/FilaPage";
 import RelatoriosPage from "./pages/RelatoriosPage";
 import AdminPage from "./pages/AdminPage";
 import HealthBadge from "./components/HealthBadge";
 
 const NAV = [
   { to: "/agenda",     label: "Agenda" },
+  { to: "/fila",       label: "Fila" },
   { to: "/clientes",   label: "Clientes" },
   { to: "/telefones",  label: "Telefones" },
   { to: "/eventos",    label: "Eventos" },
@@ -42,6 +44,7 @@ export default function App() {
         <Routes>
           <Route path="/" element={<Navigate to="/agenda" replace />} />
           <Route path="/agenda"      element={<AgendaPage />} />
+          <Route path="/fila"        element={<FilaPage />} />
           <Route path="/clientes"    element={<ClientesPage />} />
           <Route path="/telefones"   element={<TelefonesPage />} />
           <Route path="/eventos"     element={<EventosPage />} />

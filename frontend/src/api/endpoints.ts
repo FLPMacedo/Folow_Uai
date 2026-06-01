@@ -3,6 +3,7 @@ import { api, API_BASE } from "./client";
 import type {
   AgendaItem,
   Backup,
+  FilaResponse,
   Cliente,
   ClienteCreate,
   ClienteUpdate,
@@ -223,3 +224,29 @@ export const deleteGrupo = (id: number) =>
 // =========================================================================
 export const getAgenda = (from: string, to: string) =>
   api.get<AgendaItem[]>("/agenda", { from, to });
+
+// =========================================================================
+// Fila de trabalho
+// =========================================================================
+export const getFila = (opts?: {
+  incluir_falhas?: boolean;
+  incluir_pendentes?: boolean;
+  incluir_bloqueados?: boolean;
+}) => api.get<FilaResponse>("/fila", opts);
+
+export const retryEnvio = (id: number) =>
+  api.post<{ ok: boolean; envio_id: number; novo_status: string }>(
+    `/fila/${id}/retry`,
+  );
+
+export const marcarEnviadoManual = (id: number, nota?: string) =>
+  api.post<{ ok: boolean; envio_id: number }>(
+    `/fila/${id}/marcar-enviado`,
+    undefined,
+    nota ? { nota } : undefined,
+  );
+
+export const enviarAgora = (id: number) =>
+  api.post<{ ok: boolean; envio_id_original: number; envio_id_novo: number; status_novo: string }>(
+    `/fila/${id}/enviar-agora`,
+  );
